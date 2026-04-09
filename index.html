@@ -13,6 +13,10 @@
         @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .scanning { animation: pulse-slow 1.5s infinite; color: #38bdf8; }
         .hidden { display: none !important; }
+        /* Sleek custom scrollbar for the live feed */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 4px; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -72,7 +76,7 @@
                 <div class="border-2 border-dashed border-slate-600 rounded-xl p-10 text-center">
                     <i class="fa-solid fa-file-arrow-up text-5xl text-sky-500 mb-4"></i>
                     <h3 class="text-xl font-bold mb-2">Upload Apollo CSV</h3>
-                    <p class="text-slate-400 mb-6">Our Scavenger logic will extract, wash, and let you download the clean list.</p>
+                    <p class="text-slate-400 mb-6">Our Scavenger logic will extract, wash, and map the results live.</p>
                     <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
                     <button onclick="document.getElementById('csvFile').click()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-6 py-3 rounded-lg font-medium transition-all">Select CSV File</button>
                 </div>
@@ -97,6 +101,12 @@
                 <i class="fa-solid fa-play"></i> INITIATE BULK WASH
             </button>
 
+            <div id="liveFeedContainer" class="hidden glass p-6 rounded-2xl mb-4">
+                <h3 class="text-lg font-bold mb-4 border-b border-slate-700 pb-2"><i class="fa-solid fa-list-check mr-2 text-sky-500"></i> Live Verification Log</h3>
+                <div id="liveFeed" class="max-h-64 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    </div>
+            </div>
+
             <button id="downloadBtn" onclick="downloadResults()" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl transition-all shadow-lg shadow-sky-500/20 text-lg flex justify-center items-center gap-2 hidden">
                 <i class="fa-solid fa-download"></i> DOWNLOAD WASHED LIST (CSV)
             </button>
@@ -120,7 +130,7 @@
                 document.getElementById('tab-bulk').classList.add('active-tab');
                 document.getElementById('view-bulk').classList.remove('hidden');
                 document.getElementById('pageTitle').innerText = "Bulk List Washer";
-                document.getElementById('pageDesc').innerText = "Clean thousands of leads and download the results.";
+                document.getElementById('pageDesc').innerText = "Clean thousands of leads and watch the live visual log.";
             }
         }
 
@@ -156,9 +166,8 @@
             }
         }
 
-        // --- NEW BULK LOGIC WITH EXPORT ---
         let bulkEmails = [];
-        let exportData = []; // Array to hold the final results
+        let exportData = []; 
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
@@ -173,10 +182,11 @@
                     bulkEmails = [...new Set(extracted)]; 
                     document.getElementById('stat-total').innerText = bulkEmails.length;
                     
-                    // Reset UI
                     document.getElementById('stat-valid').innerText = "0";
                     document.getElementById('stat-invalid').innerText = "0";
                     document.getElementById('downloadBtn').classList.add('hidden');
+                    document.getElementById('liveFeedContainer').classList.add('hidden');
+                    document.getElementById('liveFeed').innerHTML = '';
                     
                     const btn = document.getElementById('startBulkBtn');
                     btn.classList.remove('hidden');
@@ -190,14 +200,20 @@
 
         async function startBulkWash() {
             const btn = document.getElementById('startBulkBtn');
+            const feedContainer = document.getElementById('liveFeedContainer');
+            const feed = document.getElementById('liveFeed');
+            
             btn.disabled = true;
-            exportData = []; // Clear previous data
+            feedContainer.classList.remove('hidden');
+            exportData = []; 
             let validCount = 0; 
             let invalidCount = 0;
 
             for (let i = 0; i < bulkEmails.length; i++) {
                 btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing ${i+1} of ${bulkEmails.length}...`;
                 
+                let feedHtml = '';
+
                 try {
                     const response = await fetch('https://api.mailvah.com/verify', {
                         method: 'POST',
@@ -210,41 +226,41 @@
                         validCount++;
                         document.getElementById('stat-valid').innerText = validCount;
                         exportData.push({ email: bulkEmails[i], status: 'DELIVERABLE' });
+                        feedHtml = `<div class="flex justify-between items-center bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20"><span class="text-slate-300 text-sm font-mono truncate max-w-[70%]">${bulkEmails[i]}</span><span class="text-emerald-400 bg-emerald-400/20 px-2 py-1 rounded text-[10px] font-bold uppercase"><i class="fa-solid fa-check mr-1"></i> Safe</span></div>`;
                     } else {
                         invalidCount++;
                         document.getElementById('stat-invalid').innerText = invalidCount;
                         exportData.push({ email: bulkEmails[i], status: 'UNDELIVERABLE' });
+                        feedHtml = `<div class="flex justify-between items-center bg-red-500/10 p-3 rounded-lg border border-red-500/20"><span class="text-slate-400 text-sm font-mono truncate max-w-[70%] line-through">${bulkEmails[i]}</span><span class="text-red-400 bg-red-400/20 px-2 py-1 rounded text-[10px] font-bold uppercase"><i class="fa-solid fa-xmark mr-1"></i> Dead</span></div>`;
                     }
                 } catch (e) {
-                    exportData.push({ email: bulkEmails[i], status: 'ERROR_TIMEOUT' });
+                    exportData.push({ email: bulkEmails[i], status: 'ERROR' });
                 }
                 
+                // Inject into live feed and scroll to bottom
+                if (feedHtml) {
+                    feed.insertAdjacentHTML('beforeend', feedHtml);
+                    feed.scrollTop = feed.scrollHeight;
+                }
+
                 await new Promise(r => setTimeout(r, 200)); 
             }
 
             btn.innerHTML = `<i class="fa-solid fa-check"></i> WASH COMPLETE`;
             btn.classList.replace('bg-emerald-500', 'bg-slate-600');
-            
-            // Show the magic download button
             document.getElementById('downloadBtn').classList.remove('hidden');
         }
 
-        // --- THE EXPORT FUNCTION ---
         function downloadResults() {
-            // Create CSV Headers
             let csvContent = "data:text/csv;charset=utf-8,Email_Address,Mailvah_Status\n";
-            
-            // Add rows
             exportData.forEach(function(rowArray) {
                 csvContent += rowArray.email + "," + rowArray.status + "\n";
             });
-
-            // Trigger the download to the user's phone/computer
             var encodedUri = encodeURI(csvContent);
             var link = document.createElement("a");
             link.setAttribute("href", encodedUri);
             link.setAttribute("download", "Mailvah_Cleaned_List.csv");
-            document.body.appendChild(link); // Required for Firefox/Mobile
+            document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
