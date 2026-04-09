@@ -9,10 +9,10 @@
     <style>
         body { background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .sidebar-item:hover { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-right: 3px solid #38bdf8; }
         .active-tab { background: rgba(56, 189, 248, 0.1); color: #38bdf8; border-right: 3px solid #38bdf8; }
         @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .scanning { animation: pulse-slow 1.5s infinite; color: #38bdf8; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -24,30 +24,12 @@
         </div>
 
         <div class="flex-1 py-6 flex flex-col gap-2">
-            <button class="sidebar-item active-tab flex items-center gap-3 px-6 py-4 text-slate-400 transition-all text-left w-full">
-                <i class="fa-solid fa-crosshairs w-5 text-center"></i>
-                <span class="font-medium">Single Verify</span>
+            <button onclick="switchTab('single')" id="tab-single" class="active-tab flex items-center gap-3 px-6 py-4 text-slate-400 transition-all text-left w-full">
+                <i class="fa-solid fa-crosshairs w-5 text-center"></i><span class="font-medium">Single Verify</span>
             </button>
-            <button class="sidebar-item flex items-center gap-3 px-6 py-4 text-slate-400 transition-all text-left w-full">
-                <i class="fa-solid fa-file-csv w-5 text-center"></i>
-                <span class="font-medium">Bulk List Washer</span>
-                <span class="ml-auto text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400">PRO</span>
+            <button onclick="switchTab('bulk')" id="tab-bulk" class="flex items-center gap-3 px-6 py-4 text-slate-400 transition-all text-left w-full hover:bg-slate-800">
+                <i class="fa-solid fa-file-csv w-5 text-center"></i><span class="font-medium">Bulk Washer</span>
             </button>
-            <button class="sidebar-item flex items-center gap-3 px-6 py-4 text-slate-400 transition-all text-left w-full">
-                <i class="fa-solid fa-magnifying-glass w-5 text-center"></i>
-                <span class="font-medium">Lead Finder</span>
-                <span class="ml-auto text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400">PRO</span>
-            </button>
-        </div>
-
-        <div class="p-6 border-t border-slate-800">
-            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                <p class="text-xs text-slate-400 mb-1">Zero-Burn Credits</p>
-                <div class="flex items-end gap-2">
-                    <span class="text-2xl font-bold text-emerald-400">10,000</span>
-                </div>
-                <button class="mt-3 w-full bg-slate-700 hover:bg-slate-600 text-xs font-bold py-2 rounded transition-all">BUY CREDITS (FLUTTERWAVE)</button>
-            </div>
         </div>
     </div>
 
@@ -55,34 +37,28 @@
         
         <div class="flex justify-between items-center mb-10">
             <div>
-                <h2 class="text-3xl font-bold">Deep-Scan Engine</h2>
-                <p class="text-slate-400 mt-1">Verify an inbox instantly using direct Port 25 handshakes.</p>
+                <h2 id="pageTitle" class="text-3xl font-bold">Deep-Scan Engine</h2>
+                <p id="pageDesc" class="text-slate-400 mt-1">Verify an inbox instantly using direct Port 25 handshakes.</p>
             </div>
             <div class="flex items-center gap-4 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
                 <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                <span class="text-sm font-medium text-slate-300">Engine API: Online</span>
+                <span class="text-sm font-medium text-slate-300">Engine API: Secure (HTTPS)</span>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
-            
+        <div id="view-single" class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
             <div class="glass p-8 rounded-2xl">
                 <label class="block text-sm font-medium text-slate-400 mb-2">Target Email Address</label>
-                <input type="email" id="emailInput" placeholder="ceo@company.com" 
-                       class="w-full bg-slate-900/80 border border-slate-700 p-4 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all text-lg mb-6">
-                
+                <input type="email" id="emailInput" placeholder="ceo@company.com" class="w-full bg-slate-900/80 border border-slate-700 p-4 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none transition-all text-lg mb-6">
                 <button onclick="verifyEmail()" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-900 font-bold py-4 rounded-xl transition-all shadow-lg shadow-sky-500/20 text-lg flex justify-center items-center gap-2">
                     <i class="fa-solid fa-bolt"></i> ENGAGE ENGINE
                 </button>
             </div>
-
             <div id="statusCard" class="glass p-8 rounded-2xl flex flex-col items-center justify-center text-center min-h-[250px]">
                 <div id="defaultMsg">
                     <i class="fa-solid fa-shield-halved text-4xl text-slate-600 mb-4"></i>
                     <h3 class="text-slate-300 font-medium text-lg">Awaiting Target</h3>
-                    <p class="text-slate-500 text-sm mt-2">Enter an email to initiate Port 25 scan.</p>
                 </div>
-
                 <div id="resultsContent" class="hidden w-full">
                     <div id="statusIcon" class="text-5xl mb-4"></div>
                     <h2 id="statusTitle" class="text-3xl font-bold mb-2"></h2>
@@ -91,62 +67,155 @@
             </div>
         </div>
 
+        <div id="view-bulk" class="hidden max-w-5xl">
+            <div class="glass p-8 rounded-2xl mb-8">
+                <div class="border-2 border-dashed border-slate-600 rounded-xl p-10 text-center">
+                    <i class="fa-solid fa-file-arrow-up text-5xl text-sky-500 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Upload Apollo CSV</h3>
+                    <p class="text-slate-400 mb-6">Our Scavenger logic will automatically extract and wash the emails.</p>
+                    <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
+                    <button onclick="document.getElementById('csvFile').click()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-6 py-3 rounded-lg font-medium transition-all">Select CSV File</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6 mb-8">
+                <div class="glass p-6 rounded-xl border-l-4 border-sky-500">
+                    <p class="text-slate-400 text-sm">Found in File</p>
+                    <h3 id="stat-total" class="text-3xl font-bold">0</h3>
+                </div>
+                <div class="glass p-6 rounded-xl border-l-4 border-emerald-500">
+                    <p class="text-slate-400 text-sm">Deliverable (Safe)</p>
+                    <h3 id="stat-valid" class="text-3xl font-bold text-emerald-500">0</h3>
+                </div>
+                <div class="glass p-6 rounded-xl border-l-4 border-red-500">
+                    <p class="text-slate-400 text-sm">Undeliverable (Dead)</p>
+                    <h3 id="stat-invalid" class="text-3xl font-bold text-red-500">0</h3>
+                </div>
+            </div>
+
+            <button id="startBulkBtn" onclick="startBulkWash()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 text-lg flex justify-center items-center gap-2 hidden">
+                <i class="fa-solid fa-play"></i> INITIATE BULK WASH
+            </button>
+        </div>
+
     </div>
 
     <script>
+        // Tab Logic
+        function switchTab(tab) {
+            document.getElementById('tab-single').classList.remove('active-tab');
+            document.getElementById('tab-bulk').classList.remove('active-tab');
+            document.getElementById('view-single').classList.add('hidden');
+            document.getElementById('view-bulk').classList.add('hidden');
+
+            if (tab === 'single') {
+                document.getElementById('tab-single').classList.add('active-tab');
+                document.getElementById('view-single').classList.remove('hidden');
+                document.getElementById('pageTitle').innerText = "Deep-Scan Engine";
+                document.getElementById('pageDesc').innerText = "Verify an inbox instantly using direct Port 25 handshakes.";
+            } else {
+                document.getElementById('tab-bulk').classList.add('active-tab');
+                document.getElementById('view-bulk').classList.remove('hidden');
+                document.getElementById('pageTitle').innerText = "Bulk List Washer";
+                document.getElementById('pageDesc').innerText = "Clean thousands of leads automatically to protect your domain.";
+            }
+        }
+
+        // Single Verify Logic
         async function verifyEmail() {
             const email = document.getElementById('emailInput').value;
-            const statusCard = document.getElementById('statusCard');
-            const defaultMsg = document.getElementById('defaultMsg');
-            const resultsContent = document.getElementById('resultsContent');
-            const statusIcon = document.getElementById('statusIcon');
-            const statusTitle = document.getElementById('statusTitle');
-            const statusReason = document.getElementById('statusReason');
-
             if (!email) return;
-
-            defaultMsg.classList.add('hidden');
-            resultsContent.classList.remove('hidden');
-            
-            statusCard.style.boxShadow = "none";
-            statusCard.style.borderColor = "rgba(255, 255, 255, 0.05)";
-            
-            statusIcon.innerHTML = '<i class="fa-solid fa-satellite-dish text-sky-500 scanning"></i>';
-            statusTitle.innerText = "Bypassing Filters...";
-            statusTitle.className = "text-3xl font-bold mb-2 scanning";
-            statusReason.innerText = "Connecting to MX Nodes...";
+            const statusCard = document.getElementById('statusCard');
+            document.getElementById('defaultMsg').classList.add('hidden');
+            document.getElementById('resultsContent').classList.remove('hidden');
+            document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-satellite-dish text-sky-500 scanning"></i>';
+            document.getElementById('statusTitle').innerText = "Bypassing Filters...";
+            document.getElementById('statusTitle').className = "text-3xl font-bold mb-2 scanning";
+            document.getElementById('statusReason').innerText = "Connecting to MX Nodes...";
             
             try {
-                // Notice this points to your new Cloudflare API subdomain!
                 const response = await fetch('https://api.mailvah.com/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email })
                 });
-
                 const data = await response.json();
-                
                 if (data.status === 'VALID') {
-                    statusCard.style.boxShadow = "0 0 30px rgba(16, 185, 129, 0.15)";
-                    statusCard.style.borderColor = "#10b981";
-                    statusIcon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
-                    statusTitle.innerText = "DELIVERABLE";
-                    statusTitle.className = "text-3xl font-bold mb-2 text-emerald-500";
-                    statusReason.innerText = "Inbox is active. Safe to send.";
+                    document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+                    document.getElementById('statusTitle').innerText = "DELIVERABLE";
+                    document.getElementById('statusTitle').className = "text-3xl font-bold mb-2 text-emerald-500";
+                    document.getElementById('statusReason').innerText = "Inbox is active. Safe to send.";
                 } else {
-                    statusCard.style.boxShadow = "0 0 30px rgba(239, 68, 68, 0.15)";
-                    statusCard.style.borderColor = "#ef4444";
-                    statusIcon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500"></i>';
-                    statusTitle.innerText = "UNDELIVERABLE";
-                    statusTitle.className = "text-3xl font-bold mb-2 text-red-500";
-                    statusReason.innerText = data.reason || "Hard bounce risk. Do not send.";
+                    document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500"></i>';
+                    document.getElementById('statusTitle').innerText = "UNDELIVERABLE";
+                    document.getElementById('statusTitle').className = "text-3xl font-bold mb-2 text-red-500";
+                    document.getElementById('statusReason').innerText = data.reason || "Hard bounce risk. Do not send.";
                 }
-            } catch (error) {
-                statusIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>';
-                statusTitle.innerText = "Connection Error";
-                statusTitle.className = "text-3xl font-bold mb-2 text-yellow-500";
-                statusReason.innerText = "Could not reach api.mailvah.com.";
+            } catch (e) {
+                document.getElementById('statusTitle').innerText = "Connection Error";
             }
+        }
+
+        // Bulk Washer Logic
+        let bulkEmails = [];
+        let validCount = 0;
+        let invalidCount = 0;
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                // Scavenger Regex: Finds every email format hidden in the CSV text
+                const extracted = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi);
+                
+                if (extracted && extracted.length > 0) {
+                    // Remove duplicates
+                    bulkEmails = [...new Set(extracted)]; 
+                    document.getElementById('stat-total').innerText = bulkEmails.length;
+                    document.getElementById('startBulkBtn').classList.remove('hidden');
+                    document.getElementById('startBulkBtn').innerText = `INITIATE BULK WASH (${bulkEmails.length} targets)`;
+                } else {
+                    alert("No valid emails found in this CSV.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function startBulkWash() {
+            document.getElementById('startBulkBtn').disabled = true;
+            validCount = 0; invalidCount = 0;
+
+            for (let i = 0; i < bulkEmails.length; i++) {
+                document.getElementById('startBulkBtn').innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing ${i+1} of ${bulkEmails.length}...`;
+                
+                try {
+                    const response = await fetch('https://api.mailvah.com/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: bulkEmails[i] })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.status === 'VALID') {
+                        validCount++;
+                        document.getElementById('stat-valid').innerText = validCount;
+                    } else {
+                        invalidCount++;
+                        document.getElementById('stat-invalid').innerText = invalidCount;
+                    }
+                } catch (e) {
+                    // Network skip
+                }
+                
+                // Add a tiny 200ms delay between checks so we don't crash our own server
+                await new Promise(r => setTimeout(r, 200)); 
+            }
+
+            document.getElementById('startBulkBtn').innerHTML = `<i class="fa-solid fa-check"></i> WASH COMPLETE`;
+            document.getElementById('startBulkBtn').classList.replace('bg-emerald-500', 'bg-sky-500');
         }
     </script>
 </body>
