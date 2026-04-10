@@ -432,12 +432,33 @@
             document.body.removeChild(link);
         }
 
+        // ==========================================
+        // DATABASE CONNECTION & SESSION MEMORY
+        // ==========================================
         const supabaseUrl = 'https://onznuyxevistjmsgxnfm.supabase.co';
         const supabaseKey = 'sb_publishable_gZ1Ea52nk0JCEO5twFFJwQ_CkHjXZqg';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentCredits = 0;
         let userPlan = 'Free';
+
+        // NEW: Check if user is already logged in on page load
+        _supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                document.getElementById('authContainer').classList.add('hidden');
+                fetchUserCredits();
+            }
+        });
+
+        // NEW: Listen for any authentication changes (keeps them logged in on refresh)
+        _supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                document.getElementById('authContainer').classList.add('hidden');
+                fetchUserCredits();
+            } else if (event === 'SIGNED_OUT') {
+                document.getElementById('authContainer').classList.remove('hidden');
+            }
+        });
 
         async function fetchUserCredits() {
             const { data: { user } } = await _supabase.auth.getUser();
@@ -477,7 +498,8 @@
                 msg.innerText = error.message;
             } else {
                 msg.classList.replace('text-sky-400', 'text-emerald-400');
-                msg.innerText = "Success! You can now log in.";
+                msg.innerText = "Account secured! Loading command center...";
+                // Let the onAuthStateChange listener handle letting them in
             }
         }
 
@@ -495,13 +517,13 @@
             if (error) {
                 msg.classList.replace('text-sky-400', 'text-red-400');
                 msg.innerText = error.message;
-            } else {
-                document.getElementById('authContainer').classList.add('hidden');
-                fetchUserCredits();
-                document.getElementById('paywallContainer').classList.remove('hidden');
             }
+            // If successful, the onAuthStateChange listener kicks in automatically and opens the vault. No forced paywall!
         }
         
+        // ==========================================
+        // CHECKOUT & BILLING LOGIC
+        // ==========================================
         const pricingTiers = [
             { credits: "1,500", monthlyPrice: 29, cpl: "$0.019" },
             { credits: "5,000", monthlyPrice: 79, cpl: "$0.015" },
@@ -579,55 +601,3 @@
             });
         }
     </script>
-
-    <div id="paywallContainer" class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/95 backdrop-blur-md px-4 hidden">
-        <div class="max-w-lg w-full bg-slate-900 border border-blue-500/30 rounded-2xl p-6 md:p-8 shadow-[0_0_50px_rgba(59,130,246,0.15)]">
-            <div class="text-center mb-6">
-                <div class="flex justify-center items-center gap-2 mb-2">
-                    <div class="bg-blue-600 p-1.5 rounded text-white text-xs"><i class="fa-solid fa-m"></i></div>
-                    <h2 class="text-xl md:text-2xl font-black text-white tracking-tight">Mailvah <span class="text-blue-500">Pro Network</span></h2>
-                </div>
-                <p class="text-slate-400 text-xs md:text-sm">Select your volume. <span class="text-emerald-400 font-semibold">Features 5x Rollover Credits.</span></p>
-            </div>
-            
-            <div class="flex justify-center mb-4 md:mb-6">
-                <button onclick="toggleBilling()" class="bg-slate-800 border border-slate-700 text-slate-300 px-4 md:px-5 py-2 rounded-full text-xs md:text-sm font-semibold hover:bg-slate-700 transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-sync"></i> <span id="billingToggleText">Billed Monthly</span>
-                </button>
-            </div>
-
-            <div class="bg-slate-950 rounded-xl p-4 md:p-6 border border-slate-800 mb-6 text-center">
-                <div class="text-slate-400 font-semibold uppercase tracking-wider text-[10px] md:text-xs mb-1">Monthly Volume Limit</div>
-                <div class="text-2xl md:text-3xl font-black text-white mb-4"><span id="displayCredits">1,500</span> <span class="text-sm md:text-lg text-slate-500 font-medium">Leads</span></div>
-                
-                <div class="flex justify-between items-end border-t border-slate-800 pt-4">
-                    <div class="text-left">
-                        <div class="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider mb-1">Cost Per Lead</div>
-                        <div class="text-emerald-400 font-bold text-sm md:text-base" id="displayCPL">$0.019</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-3xl md:text-4xl font-black text-white">$<span id="displayPrice">29</span><span class="text-xs md:text-sm text-slate-500 font-medium">/mo</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mb-6 md:mb-8">
-                <input type="range" id="volumeSlider" min="0" max="5" value="0" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" oninput="updateSlider()">
-                <div class="flex justify-between text-[10px] md:text-xs font-bold text-slate-500 mt-3 uppercase tracking-wider">
-                    <span>Starter</span>
-                    <span>Agency</span>
-                </div>
-            </div>
-
-            <button onclick="makePayment()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 md:py-4 px-4 rounded-xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-blue-500/25 text-sm md:text-base">
-                <i class="fa-solid fa-credit-card"></i> SECURE CHECKOUT
-            </button>
-            <button onclick="document.getElementById('paywallContainer').classList.add('hidden')" class="w-full bg-transparent text-slate-500 font-bold py-2 md:py-3 mt-2 text-[10px] md:text-xs uppercase tracking-widest hover:text-white transition-colors">
-                Close
-            </button>
-        </div>
-    </div>
-    
-    <script src="https://checkout.flutterwave.com/v3.js"></script>
-</body>
-</html>
