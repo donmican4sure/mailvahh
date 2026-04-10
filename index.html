@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mailvah Pro | Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { background-color: #0b1120; color: white; font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); }
@@ -22,6 +23,38 @@
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-slate-200">
+    <div id="authContainer" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 px-4">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+        <div class="text-center mb-8">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <div class="bg-blue-600 p-2 rounded-lg"><i class="fa-solid fa-m text-white text-xl"></i></div>
+                <span class="text-2xl font-black text-white tracking-tight">MAILVAH<span class="text-blue-500 font-medium">PRO</span></span>
+            </div>
+            <h2 class="text-xl font-bold text-slate-200">Access the Command Center</h2>
+            <p class="text-sm text-slate-400 mt-2">Enterprise-grade deliverability platform.</p>
+        </div>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Email Address</label>
+                <input type="email" id="authEmail" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-slate-600" placeholder="ceo@company.com">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Password</label>
+                <input type="password" id="authPassword" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-slate-600" placeholder="••••••••">
+            </div>
+            
+            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center gap-2 mt-6">
+                <i class="fa-solid fa-lock-open text-sm"></i> SECURE LOGIN
+            </button>
+            <button onclick="handleSignUp()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 px-4 rounded-lg transition-colors mt-2 border border-slate-700">
+                Create Account
+            </button>
+            
+            <p id="authMessage" class="text-center text-sm font-medium mt-4 hidden"></p>
+        </div>
+    </div>
+</div>
 
     <div class="w-64 bg-[#0f172a] h-full flex flex-col border-r border-slate-800/50 z-10 shadow-2xl">
         <div class="p-6 flex items-center gap-3 border-b border-slate-800/50">
@@ -346,6 +379,53 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // ==========================================
+        // THE VAULT LOCK (SUPABASE AUTHENTICATION)
+        // ==========================================
+        const supabaseUrl = 'https://onznuyxevistjmsgxnfm.supabase.co';
+        const supabaseKey = 'sb_publishable_gZ1Ea52nk0JCEO5twFFJwQ_CkHjXZqg';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        async function handleSignUp() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const msg = document.getElementById('authMessage');
+            
+            msg.classList.remove('hidden', 'text-red-400', 'text-emerald-400');
+            msg.innerText = "Creating account...";
+            msg.classList.add('text-sky-400');
+
+            const { data, error } = await _supabase.auth.signUp({ email, password });
+            
+            if (error) {
+                msg.classList.replace('text-sky-400', 'text-red-400');
+                msg.innerText = error.message;
+            } else {
+                msg.classList.replace('text-sky-400', 'text-emerald-400');
+                msg.innerText = "Success! You can now log in.";
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const msg = document.getElementById('authMessage');
+            
+            msg.classList.remove('hidden', 'text-red-400');
+            msg.innerText = "Authenticating...";
+            msg.classList.add('text-sky-400');
+
+            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+            
+            if (error) {
+                msg.classList.replace('text-sky-400', 'text-red-400');
+                msg.innerText = error.message;
+            } else {
+                // SUCCESS! Hide Auth Overlay to reveal Dashboard
+                document.getElementById('authContainer').classList.add('hidden');
+            }
         }
     </script>
 </body>
