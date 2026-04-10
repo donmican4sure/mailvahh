@@ -423,10 +423,133 @@
                 msg.classList.replace('text-sky-400', 'text-red-400');
                 msg.innerText = error.message;
             } else {
-                // SUCCESS! Hide Auth Overlay to reveal Dashboard
+                // SUCCESS! Hide Auth Screen, Reveal the Dynamic Paywall
                 document.getElementById('authContainer').classList.add('hidden');
+                document.getElementById('paywallContainer').classList.remove('hidden');
             }
         }
+
+        // ==========================================
+        // THE CASH REGISTER (FLUTTERWAVE + SLIDER)
+        // ==========================================
+        
+        // Your Premium Pricing Tiers
+        const pricingTiers = [
+            { credits: "1,500", monthlyPrice: 29, cpl: "$0.019" },
+            { credits: "5,000", monthlyPrice: 79, cpl: "$0.015" },
+            { credits: "15,000", monthlyPrice: 149, cpl: "$0.009" },
+            { credits: "50,000", monthlyPrice: 299, cpl: "$0.005" },
+            { credits: "100,000", monthlyPrice: 499, cpl: "$0.004" },
+            { credits: "200,000", monthlyPrice: 799, cpl: "$0.003" }
+        ];
+
+        let currentTierIndex = 0;
+        let isAnnual = false;
+
+        function toggleBilling() {
+            isAnnual = !isAnnual;
+            document.getElementById('billingToggleText').innerText = isAnnual ? "Billed Annually (20% Off)" : "Billed Monthly";
+            updateSlider();
+        }
+
+        function updateSlider() {
+            const slider = document.getElementById('volumeSlider');
+            currentTierIndex = slider.value;
+            const tier = pricingTiers[currentTierIndex];
+            
+            let finalPrice = tier.monthlyPrice;
+            if (isAnnual) {
+                finalPrice = Math.round(tier.monthlyPrice * 0.8); // 20% discount math
+            }
+            
+            document.getElementById('displayCredits').innerText = tier.credits;
+            document.getElementById('displayPrice').innerText = finalPrice;
+            
+            // Calculate dynamic Cost Per Lead
+            let rawCredits = parseInt(tier.credits.replace(',', ''));
+            let dynamicCPL = isAnnual ? "$" + (finalPrice / rawCredits).toFixed(3) : tier.cpl;
+            document.getElementById('displayCPL').innerText = dynamicCPL;
+        }
+
+        function makePayment() {
+            const userEmail = document.getElementById('authEmail').value || 'founder@company.com';
+            const tier = pricingTiers[currentTierIndex];
+            
+            // If annual, charge them 12x the discounted monthly price upfront
+            let chargeAmount = isAnnual ? Math.round(tier.monthlyPrice * 0.8) * 12 : tier.monthlyPrice; 
+            
+            FlutterwaveCheckout({
+                public_key: "FLWPUBK-dc0754094fea48efe0f9cc3fe45ed853-X",
+                tx_ref: "mailvah_pro_" + Date.now(),
+                amount: chargeAmount,
+                currency: "USD",
+                payment_options: "card, banktransfer",
+                customer: {
+                    email: userEmail,
+                    name: "Mailvah User"
+                },
+                customizations: {
+                    title: "Mailvah PRO Network",
+                    description: tier.credits + " Credits (" + (isAnnual ? "Annual Plan" : "Monthly Plan") + ")",
+                    logo: "https://cdn-icons-png.flaticon.com/512/2913/2913990.png"
+                },
+                callback: function (payment) {
+                    console.log("Payment successful", payment);
+                    // THE MAGIC: Hide the paywall and unlock the engine!
+                    document.getElementById('paywallContainer').classList.add('hidden');
+                },
+                onclose: function() {
+                    console.log("Payment modal closed");
+                }
+            });
+        }
     </script>
+
+    <div id="paywallContainer" class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/95 backdrop-blur-md px-4 hidden">
+        <div class="max-w-lg w-full bg-slate-900 border border-blue-500/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.15)]">
+            <div class="text-center mb-6">
+                <div class="flex justify-center items-center gap-2 mb-2">
+                    <div class="bg-blue-600 p-1.5 rounded text-white text-xs"><i class="fa-solid fa-m"></i></div>
+                    <h2 class="text-2xl font-black text-white tracking-tight">Mailvah <span class="text-blue-500">Pro Network</span></h2>
+                </div>
+                <p class="text-slate-400 text-sm">Select your volume. <span class="text-emerald-400 font-semibold">Features 5x Rollover Credits.</span></p>
+            </div>
+            
+            <div class="flex justify-center mb-6">
+                <button onclick="toggleBilling()" class="bg-slate-800 border border-slate-700 text-slate-300 px-5 py-2 rounded-full text-sm font-semibold hover:bg-slate-700 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-sync"></i> <span id="billingToggleText">Billed Monthly</span>
+                </button>
+            </div>
+
+            <div class="bg-slate-950 rounded-xl p-6 border border-slate-800 mb-6 text-center">
+                <div class="text-slate-400 font-semibold uppercase tracking-wider text-xs mb-1">Monthly Volume Limit</div>
+                <div class="text-3xl font-black text-white mb-4"><span id="displayCredits">1,500</span> <span class="text-lg text-slate-500 font-medium">Leads</span></div>
+                
+                <div class="flex justify-between items-end border-t border-slate-800 pt-4">
+                    <div class="text-left">
+                        <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Cost Per Lead</div>
+                        <div class="text-emerald-400 font-bold" id="displayCPL">$0.019</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-4xl font-black text-white">$<span id="displayPrice">29</span><span class="text-sm text-slate-500 font-medium">/mo</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <input type="range" id="volumeSlider" min="0" max="5" value="0" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" oninput="updateSlider()">
+                <div class="flex justify-between text-xs font-bold text-slate-500 mt-3 uppercase tracking-wider">
+                    <span>Starter</span>
+                    <span>Agency</span>
+                </div>
+            </div>
+
+            <button onclick="makePayment()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-blue-500/25">
+                <i class="fa-solid fa-credit-card"></i> SECURE CHECKOUT
+            </button>
+        </div>
+    </div>
+    
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
 </body>
 </html>
