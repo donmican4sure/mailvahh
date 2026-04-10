@@ -1,555 +1,341 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mailvah Pro | Command Center</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #0b1120; color: white; font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); }
-        .glass-panel { background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(16px); border: 1px solid rgba(56, 189, 248, 0.15); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
-        .glass-panel:hover { border-color: rgba(56, 189, 248, 0.3); }
-        .sidebar-item { border-left: 3px solid transparent; }
-        .active-tab { background: linear-gradient(90deg, rgba(56, 189, 248, 0.1) 0%, transparent 100%); border-left: 3px solid #38bdf8; color: #38bdf8; }
-        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); } 50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.5); } }
-        .scanning-glow { animation: pulse-glow 2s infinite; border-color: #38bdf8; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        .hidden { display: none !important; }
-        .progress-bar-inner { transition: width 0.2s ease-out; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mailvah Pro | Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0b1120; color: white; font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); }
+        .glass-panel { background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(16px); border: 1px solid rgba(56, 189, 248, 0.15); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+        .sidebar-item { border-left: 3px solid transparent; transition: all 0.2s; }
+        .active-tab { background: linear-gradient(90deg, rgba(56, 189, 248, 0.1) 0%, transparent 100%); border-left: 3px solid #38bdf8; color: #38bdf8; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); } 50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.5); } }
+        .scanning-glow { animation: pulse-glow 2s infinite; border-color: #38bdf8; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .hidden { display: none !important; }
+        .premium-lock { filter: blur(8px); pointer-events: none; opacity: 0.4; user-select: none; }
+        
+        /* Mobile Responsiveness Tweaks */
+        @media (max-width: 768px) {
+            .sidebar-hide { display: none; }
+            .main-content-expand { padding: 1.5rem !important; }
+            .grid-mobile-stack { grid-template-columns: 1fr !important; }
+        }
+    </style>
 </head>
-<body class="flex h-screen overflow-hidden text-slate-200">
-    <div id="authContainer" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 px-4">
-    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-        <div class="text-center mb-8">
-            <div class="flex items-center justify-center gap-3 mb-4">
-                <div class="bg-blue-600 p-2 rounded-lg"><i class="fa-solid fa-m text-white text-xl"></i></div>
-                <span class="text-2xl font-black text-white tracking-tight">MAILVAH<span class="text-blue-500 font-medium">PRO</span></span>
-            </div>
-            <h2 class="text-xl font-bold text-slate-200">Access the Command Center</h2>
-            <p class="text-sm text-slate-400 mt-2">Enterprise-grade deliverability platform.</p>
-        </div>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Email Address</label>
-                <input type="email" id="authEmail" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-slate-600" placeholder="ceo@company.com">
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Password</label>
-                <input type="password" id="authPassword" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-slate-600" placeholder="••••••••">
-            </div>
-            
-            <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center gap-2 mt-6">
-                <i class="fa-solid fa-lock-open text-sm"></i> SECURE LOGIN
-            </button>
-            <button onclick="handleSignUp()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 px-4 rounded-lg transition-colors mt-2 border border-slate-700">
-                Create Account
-            </button>
-            
-            <p id="authMessage" class="text-center text-sm font-medium mt-4 hidden"></p>
-        </div>
-    </div>
-</div>
+<body class="flex h-screen flex-col md:flex-row overflow-hidden text-slate-200">
 
-    <div class="w-64 bg-[#0f172a] h-full flex flex-col border-r border-slate-800/50 z-10 shadow-2xl">
-        <div class="p-6 flex items-center gap-3 border-b border-slate-800/50">
-            <div class="w-10 h-10 bg-gradient-to-br from-sky-400 to-blue-600 rounded-lg flex items-center justify-center font-bold text-white text-xl shadow-lg shadow-sky-500/20">M</div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">MAILVAH<span class="text-sky-400 text-[10px] ml-1 uppercase tracking-widest align-top">Pro</span></h1>
-        </div>
+    <div id="authContainer" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950 px-4">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <div class="bg-blue-600 p-2 rounded-lg"><i class="fa-solid fa-m text-white text-xl"></i></div>
+                    <span class="text-2xl font-black text-white tracking-tight uppercase">Mailvah<span class="text-blue-500">Pro</span></span>
+                </div>
+                <h2 class="text-lg font-bold text-slate-200">Command Center Login</h2>
+            </div>
+            <div class="space-y-4">
+                <input type="email" id="authEmail" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500" placeholder="ceo@company.com">
+                <input type="password" id="authPassword" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500" placeholder="••••••••">
+                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-black uppercase tracking-widest transition-all">Secure Login</button>
+                <button onclick="handleSignUp()" class="w-full bg-slate-800 py-3 rounded-lg text-slate-300 font-medium border border-slate-700">Create Account</button>
+                <p id="authMessage" class="text-center text-sm font-medium mt-4 hidden"></p>
+            </div>
+        </div>
+    </div>
 
-        <div class="flex-1 py-6 flex flex-col gap-1">
-            <button onclick="switchTab('single')" id="tab-single" class="sidebar-item active-tab flex items-center gap-3 px-6 py-4 text-slate-400 transition-all text-left w-full hover:text-slate-200">
-                <i class="fa-solid fa-crosshairs w-5 text-center"></i><span class="font-medium">Single Target</span>
-            </button>
-            <button onclick="switchTab('bulk')" id="tab-bulk" class="sidebar-item flex items-center gap-3 px-6 py-4 text-slate-400 transition-all text-left w-full hover:bg-slate-800/30 hover:text-slate-200">
-                <i class="fa-solid fa-layer-group w-5 text-center"></i><span class="font-medium">Bulk Engine</span>
-            </button>
-            <button class="sidebar-item flex items-center gap-3 px-6 py-4 text-slate-600 cursor-not-allowed text-left w-full">
-                <i class="fa-solid fa-database w-5 text-center"></i><span class="font-medium">Lead Finder</span><i class="fa-solid fa-lock text-[10px] ml-auto"></i>
-            </button>
-        </div>
-    </div>
+    <div id="sidebar" class="w-full md:w-64 bg-[#0f172a] flex flex-col border-b md:border-r border-slate-800/50 z-10 shadow-2xl sidebar-hide md:flex">
+        <div class="p-6 flex items-center gap-3 border-b border-slate-800/50">
+            <div class="w-10 h-10 bg-gradient-to-br from-sky-400 to-blue-600 rounded-lg flex items-center justify-center font-bold text-white text-xl shadow-lg">M</div>
+            <h1 class="text-xl font-bold tracking-tight text-white uppercase">Mailvah</h1>
+        </div>
 
-    <div class="flex-1 overflow-y-auto p-10 relative">
-        
-        <div class="flex justify-between items-center mb-10">
-            <div>
-                <h2 id="pageTitle" class="text-3xl font-bold text-white tracking-tight">Deep-Scan Engine</h2>
-                <p id="pageDesc" class="text-slate-400 mt-2 text-sm font-light">Direct Port 25 handshakes for zero-bounce validation.</p>
-            </div>
-            <div class="flex items-center gap-3 bg-slate-800/40 px-4 py-2 rounded-full border border-slate-700/50 backdrop-blur-md">
-                <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>
-                <span class="text-xs font-semibold text-slate-300 tracking-wider uppercase">API Server: Secure</span>
-            </div>
-        </div>
+        <div class="px-6 py-6 border-b border-slate-800/50 bg-slate-900/30">
+            <p class="text-[10px] uppercase text-slate-500 font-black mb-1 tracking-widest">Vault Balance</p>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-coins text-amber-500 text-sm"></i>
+                <span id="userCreditBalance" class="text-white font-black text-2xl">---</span>
+            </div>
+        </div>
 
-        <div id="view-single" class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl">
-            <div class="glass-panel p-8 rounded-2xl relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-sky-500 to-transparent opacity-50"></div>
-                <label class="block text-xs font-semibold text-sky-400 uppercase tracking-widest mb-3">Target Payload</label>
-                <input type="email" id="emailInput" placeholder="ceo@company.com" class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-xl focus:ring-1 focus:ring-sky-500 outline-none transition-all text-lg mb-8 text-white placeholder-slate-600">
-                
-                <button onclick="verifyEmail()" class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-sky-500/25 text-sm tracking-wider flex justify-center items-center gap-3">
-                    <i class="fa-solid fa-bolt"></i> ENGAGE ENGINE
-                </button>
-            </div>
-            
-            <div id="statusCard" class="glass-panel p-8 rounded-2xl flex flex-col items-center justify-center text-center min-h-[280px]">
-                <div id="defaultMsg">
-                    <i class="fa-solid fa-radar text-5xl text-slate-700 mb-4 animate-[spin_4s_linear_infinite]"></i>
-                    <h3 class="text-slate-300 font-medium text-lg">Awaiting Target</h3>
-                </div>
-                <div id="resultsContent" class="hidden w-full">
-                    <div id="statusIcon" class="text-6xl mb-6 shadow-black drop-shadow-2xl"></div>
-                    <h2 id="statusTitle" class="text-3xl font-black mb-2 tracking-tight"></h2>
-                    <p id="statusReason" class="text-slate-400 text-sm font-medium"></p>
-                </div>
-            </div>
-        </div>
+        <nav class="flex-1 py-4 flex flex-col gap-1">
+            <button onclick="switchTab('single')" id="tab-single" class="sidebar-item active-tab flex items-center gap-3 px-6 py-4 text-slate-400">
+                <i class="fa-solid fa-crosshairs w-5 text-center"></i><span class="font-bold uppercase text-xs tracking-widest">Single Scan</span>
+            </button>
+            <button onclick="switchTab('bulk')" id="tab-bulk" class="sidebar-item flex items-center gap-3 px-6 py-4 text-slate-400">
+                <i class="fa-solid fa-layer-group w-5 text-center"></i><span class="font-bold uppercase text-xs tracking-widest">Bulk Engine</span>
+            </button>
+        </nav>
+    </div>
 
-        <div id="view-bulk" class="hidden grid grid-cols-1 xl:grid-cols-12 gap-8 max-w-7xl">
-            
-            <div class="xl:col-span-5 flex flex-col gap-6">
-                <div class="glass-panel p-8 rounded-2xl text-center group transition-all duration-300 relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <i class="fa-solid fa-cloud-arrow-up text-6xl text-sky-500/70 mb-4 group-hover:text-sky-400 transition-colors"></i>
-                    <h3 class="text-xl font-bold mb-2 text-white">Upload Database</h3>
-                    <p class="text-slate-400 text-sm mb-8 leading-relaxed">Scavenger logic will auto-extract emails from raw CSV files.</p>
-                    <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
-                    <button onclick="document.getElementById('csvFile').click()" class="w-full bg-slate-800/80 hover:bg-slate-700 border border-slate-600/50 text-white font-semibold py-4 rounded-xl transition-all shadow-md text-sm">SELECT DATASET (.CSV)</button>
-                </div>
+    <main class="flex-1 overflow-y-auto p-6 md:p-10 main-content-expand relative">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+            <div>
+                <h2 id="pageTitle" class="text-3xl font-black text-white uppercase tracking-tighter">Deep-Scan Engine</h2>
+                <p id="pageDesc" class="text-slate-400 mt-1 text-sm font-light">Enterprise Port 25 handshakes for zero-bounce validation.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-800/40 px-4 py-2 rounded-full border border-slate-700/50">
+                <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                <span class="text-[10px] font-bold text-slate-300 tracking-widest uppercase">System: Online</span>
+            </div>
+        </div>
 
-                <button id="startBulkBtn" onclick="startBulkWash()" class="hidden w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-bold py-5 rounded-xl transition-all shadow-lg shadow-emerald-500/25 tracking-wider text-sm flex justify-center items-center gap-3">
-                    <i class="fa-solid fa-play"></i> INITIATE BULK WASH
-                </button>
+        <div id="view-single" class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl grid-mobile-stack">
+            <div class="glass-panel p-6 md:p-8 rounded-2xl border-t-2 border-t-blue-500/50">
+                <label class="block text-[10px] font-black text-sky-400 uppercase tracking-widest mb-3">Target Email</label>
+                <input type="email" id="emailInput" placeholder="ceo@company.com" class="w-full bg-slate-950 border border-slate-700 p-4 rounded-xl mb-6 text-white outline-none focus:border-blue-500 transition-all text-lg">
+                <button onclick="verifyEmail()" class="w-full bg-blue-600 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg shadow-blue-500/25 active:scale-95 transition-all">Engage Matrix</button>
+            </div>
+            <div id="statusCard" class="glass-panel p-8 rounded-2xl flex flex-col items-center justify-center text-center min-h-[250px]">
+                <div id="defaultMsg">
+                    <i class="fa-solid fa-radar text-5xl text-slate-700 mb-4 animate-spin"></i>
+                    <h3 class="text-slate-400 font-bold uppercase text-xs">Waiting for Input</h3>
+                </div>
+                <div id="resultsContent" class="hidden w-full">
+                    <div id="statusIcon" class="text-6xl mb-6"></div>
+                    <h2 id="statusTitle" class="text-4xl font-black mb-2 tracking-tighter"></h2>
+                    <p id="statusReason" class="text-slate-400 text-sm"></p>
+                </div>
+            </div>
+        </div>
 
-                <button id="downloadBtn" onclick="downloadResults()" class="hidden w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold py-5 rounded-xl transition-all shadow-lg shadow-sky-500/25 tracking-wider text-sm flex justify-center items-center gap-3 border border-sky-400/30">
-                    <i class="fa-solid fa-download"></i> EXPORT CLEAN ASSET
-                </button>
-            </div>
+        <div id="view-bulk" class="hidden relative max-w-7xl">
+            <div id="bulkFrictionLock" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/60 backdrop-blur-md rounded-2xl hidden">
+                <div class="bg-slate-900 p-8 md:p-12 rounded-3xl border border-blue-500/30 text-center shadow-2xl max-w-md">
+                    <i class="fa-solid fa-lock text-5xl text-blue-500 mb-4"></i>
+                    <h3 class="text-2xl font-black text-white mb-2 tracking-tighter">BULK UPLOADS LOCKED</h3>
+                    <p class="text-slate-400 mb-8 text-sm">Professional license required for batch processing.</p>
+                    <button onclick="document.getElementById('paywallContainer').classList.remove('hidden')" class="bg-blue-600 px-10 py-4 rounded-xl font-black uppercase tracking-widest shadow-lg shadow-blue-500/30">Activate Pro</button>
+                </div>
+            </div>
 
-            <div class="xl:col-span-7 flex flex-col gap-6">
-                
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="glass-panel p-5 rounded-2xl border-t-2 border-t-slate-500">
-                        <p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Found</p>
-                        <h3 id="stat-total" class="text-4xl font-black text-white">0</h3>
-                    </div>
-                    <div class="glass-panel p-5 rounded-2xl border-t-2 border-t-emerald-500 relative overflow-hidden">
-                        <div class="absolute -right-4 -bottom-4 opacity-10 text-7xl text-emerald-500"><i class="fa-solid fa-shield-check"></i></div>
-                        <p class="text-emerald-500 text-xs font-bold uppercase tracking-wider mb-1">Deliverable</p>
-                        <h3 id="stat-valid" class="text-4xl font-black text-white">0</h3>
-                    </div>
-                    <div class="glass-panel p-5 rounded-2xl border-t-2 border-t-red-500 relative overflow-hidden">
-                        <div class="absolute -right-4 -bottom-4 opacity-10 text-7xl text-red-500"><i class="fa-solid fa-skull"></i></div>
-                        <p class="text-red-500 text-xs font-bold uppercase tracking-wider mb-1">Dead</p>
-                        <h3 id="stat-invalid" class="text-4xl font-black text-white">0</h3>
-                    </div>
-                </div>
+            <div id="bulkMainUI" class="grid grid-cols-1 xl:grid-cols-12 gap-8 grid-mobile-stack">
+                <div class="xl:col-span-5 flex flex-col gap-6">
+                    <div class="glass-panel p-8 rounded-2xl text-center">
+                        <i class="fa-solid fa-file-csv text-6xl text-sky-500/40 mb-6"></i>
+                        <h3 class="text-xl font-black text-white uppercase mb-8">Upload CSV</h3>
+                        <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
+                        <button onclick="document.getElementById('csvFile').click()" class="w-full bg-slate-800 border border-slate-700 py-4 rounded-xl font-bold uppercase text-xs tracking-widest">Select Database</button>
+                    </div>
+                    <button id="startBulkBtn" onclick="startBulkWash()" class="hidden w-full bg-emerald-600 py-5 rounded-xl font-black uppercase tracking-widest shadow-lg">Start Cleaning</button>
+                    <button id="downloadBtn" onclick="downloadResults()" class="hidden w-full bg-blue-600 py-5 rounded-xl font-black uppercase tracking-widest">Download Asset</button>
+                </div>
+                <div class="xl:col-span-7 flex flex-col gap-6">
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="glass-panel p-5 rounded-xl"><p class="text-[10px] font-bold text-slate-500 uppercase">Found</p><h3 id="stat-total" class="text-3xl font-black">0</h3></div>
+                        <div class="glass-panel p-5 rounded-xl border-t-2 border-emerald-500"><p class="text-[10px] font-bold text-emerald-500 uppercase">Safe</p><h3 id="stat-valid" class="text-3xl font-black">0</h3></div>
+                        <div class="glass-panel p-5 rounded-xl border-t-2 border-red-500"><p class="text-[10px] font-bold text-red-500 uppercase">Dead</p><h3 id="stat-invalid" class="text-3xl font-black">0</h3></div>
+                    </div>
+                    <div id="progressContainer" class="hidden glass-panel p-5 rounded-xl">
+                        <div class="flex justify-between text-[10px] font-black text-slate-400 mb-2 uppercase"><span>Progress</span><span id="progressText">0%</span></div>
+                        <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden"><div id="progressBar" class="bg-blue-500 h-full transition-all" style="width: 0%"></div></div>
+                    </div>
+                    <div id="liveFeedContainer" class="hidden glass-panel rounded-xl overflow-hidden flex-1">
+                        <div class="bg-slate-900 px-4 py-3 border-b border-slate-800 text-[10px] font-black text-slate-500 uppercase">Terminal Log</div>
+                        <div id="liveFeed" class="p-4 h-64 overflow-y-auto font-mono text-[10px] space-y-1 custom-scrollbar bg-[#050914]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 
-                <div id="progressContainer" class="hidden glass-panel p-5 rounded-2xl flex flex-col justify-center">
-                    <div class="flex justify-between text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">
-                        <span>Engine Status</span>
-                        <span id="progressText">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
-                        <div id="progressBar" class="bg-gradient-to-r from-sky-500 to-blue-500 h-2 rounded-full progress-bar-inner shadow-[0_0_10px_#38bdf8]" style="width: 0%"></div>
-                    </div>
-                </div>
+    <div id="paywallContainer" class="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/95 backdrop-blur-md px-4 hidden">
+        <div class="max-w-lg w-full bg-slate-900 border border-blue-500/30 rounded-3xl p-6 md:p-8 shadow-2xl relative">
+            <button onclick="document.getElementById('paywallContainer').classList.add('hidden')" class="absolute top-6 right-6 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div class="text-center mb-6">
+                <h2 class="text-3xl font-black text-white tracking-tighter uppercase mb-4">Mailvah <span class="text-blue-500">Pro Network</span></h2>
+                <button onclick="toggleBilling()" class="bg-slate-800 border border-slate-700 px-6 py-2 rounded-full text-xs font-bold text-white"><i class="fa-solid fa-rotate mr-2"></i> <span id="billingToggleText">Billed Monthly</span></button>
+            </div>
+            
+            <div class="bg-slate-950 rounded-2xl p-6 border border-slate-800 mb-6 text-center">
+                <div class="text-[10px] text-slate-500 font-black uppercase mb-2">Monthly Limit</div>
+                <div class="text-4xl font-black text-white mb-6 tracking-tighter"><span id="displayCredits">1,500</span> <span class="text-sm text-slate-600">Credits</span></div>
+                <div class="flex justify-between items-center border-t border-slate-800 pt-4">
+                    <div class="text-left"><p class="text-[10px] text-slate-500 font-black uppercase mb-1">CPL</p><p class="text-emerald-400 font-black text-lg" id="displayCPL">$0.019</p></div>
+                    <div class="text-right"><p class="text-4xl font-black text-white">$<span id="displayPrice">29</span><span class="text-xs text-slate-500">/mo</span></p></div>
+                </div>
+            </div>
 
-                <div id="liveFeedContainer" class="hidden glass-panel p-0 rounded-2xl flex-1 flex flex-col overflow-hidden min-h-[300px]">
-                    <div class="bg-slate-900/80 px-6 py-4 border-b border-slate-800 flex justify-between items-center">
-                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-terminal mr-2 text-sky-500"></i> Server Terminal Log</h3>
-                        <div class="flex gap-1">
-                            <div class="w-2 h-2 rounded-full bg-red-500/50"></div>
-                            <div class="w-2 h-2 rounded-full bg-yellow-500/50"></div>
-                            <div class="w-2 h-2 rounded-full bg-emerald-500/50"></div>
-                        </div>
-                    </div>
-                    <div id="liveFeed" class="p-4 overflow-y-auto space-y-2 h-[300px] custom-scrollbar bg-[#050914] font-mono text-[11px]">
-                        </div>
-                </div>
+            <div class="mb-8 px-2">
+                <input type="range" id="volumeSlider" min="0" max="5" value="0" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" oninput="updateSlider()">
+                <div class="flex justify-between text-[10px] font-black text-slate-600 mt-4 uppercase"><span>Starter</span><span>Scale</span></div>
+            </div>
+            
+            <button onclick="makePayment()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl uppercase tracking-widest transition-all">Secure Checkout</button>
+        </div>
+    </div>
 
-            </div>
-        </div>
-    </div>
+    <script>
+        const supabaseUrl = 'https://onznuyxevistjmsgxnfm.supabase.co';
+        const supabaseKey = 'sb_publishable_gZ1Ea52nk0JCEO5twFFJwQ_CkHjXZqg';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    <script>
-        function switchTab(tab) {
-            document.getElementById('tab-single').classList.remove('active-tab');
-            document.getElementById('tab-bulk').classList.remove('active-tab');
-            document.getElementById('view-single').classList.add('hidden');
-            document.getElementById('view-bulk').classList.add('hidden');
+        let currentCredits = 0;
+        let pricingTiers = [
+            { credits: 1500, price: 29, cpl: "$0.019" },
+            { credits: 5000, price: 79, cpl: "$0.015" },
+            { credits: 15000, price: 149, cpl: "$0.009" },
+            { credits: 50000, price: 299, cpl: "$0.005" },
+            { credits: 100000, price: 499, cpl: "$0.004" },
+            { credits: 200000, price: 799, cpl: "$0.003" }
+        ];
 
-            if (tab === 'single') {
-                document.getElementById('tab-single').classList.add('active-tab');
-                document.getElementById('view-single').classList.remove('hidden');
-                document.getElementById('pageTitle').innerText = "Deep-Scan Engine";
-                document.getElementById('pageDesc').innerText = "Direct Port 25 handshakes for zero-bounce validation.";
-            } else {
-                document.getElementById('tab-bulk').classList.add('active-tab');
-                document.getElementById('view-bulk').classList.remove('hidden');
-                document.getElementById('view-bulk').classList.add('grid');
-                document.getElementById('pageTitle').innerText = "Bulk List Processor";
-                document.getElementById('pageDesc').innerText = "Enterprise-grade batch cleaning and domain protection.";
-            }
-        }
+        async function fetchUserCredits() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) return;
+            const { data } = await _supabase.from('user_credits').select('*').eq('user_id', user.id).single();
+            if (data) {
+                currentCredits = data.current_credits;
+                document.getElementById('userCreditBalance').innerText = currentCredits.toLocaleString();
+                if (data.plan_tier === 'Free') {
+                    document.getElementById('bulkFrictionLock').classList.remove('hidden');
+                    document.getElementById('bulkMainUI').classList.add('premium-lock');
+                } else {
+                    document.getElementById('bulkFrictionLock').classList.add('hidden');
+                    document.getElementById('bulkMainUI').classList.remove('premium-lock');
+                }
+            }
+        }
 
-        async function verifyEmail() {
-            const email = document.getElementById('emailInput').value;
-            if (!email) return;
-            const card = document.getElementById('statusCard');
-            document.getElementById('defaultMsg').classList.add('hidden');
-            document.getElementById('resultsContent').classList.remove('hidden');
-            
-            card.classList.add('scanning-glow');
-            document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-microchip text-sky-400 animate-pulse"></i>';
-            document.getElementById('statusTitle').innerText = "HEURISTIC SCAN...";
-            document.getElementById('statusTitle').className = "text-3xl font-black mb-2 text-sky-400 tracking-tight";
-            document.getElementById('statusReason').innerText = "Firing 3-burst anomaly matrix...";
-            
-            try {
-                const response = await fetch('https://api.mailvah.com/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email })
-                });
-                const data = await response.json();
-                
-                card.classList.remove('scanning-glow');
-                
-                if (data.status === 'VALID') {
-                    document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-shield-check text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]"></i>';
-                    document.getElementById('statusTitle').innerText = "DELIVERABLE";
-                    document.getElementById('statusTitle').className = "text-3xl font-black mb-2 text-emerald-400 tracking-tight";
-                    document.getElementById('statusReason').innerText = `${data.reason} (Confidence: ${data.confidence}%)`;
-                } else if (data.status === 'CATCH_ALL') {
-                    document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-triangle-exclamation text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]"></i>';
-                    document.getElementById('statusTitle').innerText = "CATCH-ALL SHIELD";
-                    document.getElementById('statusTitle').className = "text-3xl font-black mb-2 text-yellow-500 tracking-tight";
-                    document.getElementById('statusReason').innerText = `${data.reason}. Do not send.`;
-                } else {
-                    document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-skull text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]"></i>';
-                    document.getElementById('statusTitle').innerText = "UNDELIVERABLE";
-                    document.getElementById('statusTitle').className = "text-3xl font-black mb-2 text-red-500 tracking-tight";
-                    document.getElementById('statusReason').innerText = "Fatal bounce risk detected.";
-                }
-            } catch (e) {
-                card.classList.remove('scanning-glow');
-                document.getElementById('statusTitle').innerText = "API ERROR";
-            }
-        }
-        let bulkEmails = [];
-        let exportData = []; 
+        async function handleLogin() {
+            const email = document.getElementById('authEmail').value;
+            const pass = document.getElementById('authPassword').value;
+            const { error } = await _supabase.auth.signInWithPassword({ email, password: pass });
+            if (error) alert(error.message); else { document.getElementById('authContainer').classList.add('hidden'); fetchUserCredits(); }
+        }
 
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        async function handleSignUp() {
+            const email = document.getElementById('authEmail').value;
+            const pass = document.getElementById('authPassword').value;
+            const { error } = await _supabase.auth.signUp({ email, password: pass });
+            if (error) alert(error.message); else alert("Check email for verification!");
+        }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const extracted = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi);
-                
-                if (extracted && extracted.length > 0) {
-                    bulkEmails = [...new Set(extracted)]; 
-                    document.getElementById('stat-total').innerText = bulkEmails.length;
-                    
-                    // Reset
-                    document.getElementById('stat-valid').innerText = "0";
-                    document.getElementById('stat-invalid').innerText = "0";
-                    document.getElementById('downloadBtn').classList.add('hidden');
-                    document.getElementById('liveFeedContainer').classList.add('hidden');
-                    document.getElementById('progressContainer').classList.add('hidden');
-                    document.getElementById('liveFeed').innerHTML = '';
-                    document.getElementById('progressBar').style.width = '0%';
-                    
-                    const btn = document.getElementById('startBulkBtn');
-                    btn.classList.remove('hidden');
-                    btn.classList.remove('bg-slate-700', 'border-slate-600', 'text-slate-400');
-                    btn.classList.add('bg-gradient-to-r', 'from-emerald-500', 'to-emerald-600', 'text-white');
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-play"></i> INITIATE WASH (${bulkEmails.length} Targets)`;
-                }
-            };
-            reader.readAsText(file);
-        }
+        function switchTab(tab) {
+            document.getElementById('view-single').classList.add('hidden');
+            document.getElementById('view-bulk').classList.add('hidden');
+            document.getElementById('tab-single').classList.remove('active-tab');
+            document.getElementById('tab-bulk').classList.remove('active-tab');
+            if (tab === 'single') {
+                document.getElementById('view-single').classList.remove('hidden');
+                document.getElementById('tab-single').classList.add('active-tab');
+                document.getElementById('pageTitle').innerText = "Deep-Scan Engine";
+            } else {
+                document.getElementById('view-bulk').classList.remove('hidden');
+                document.getElementById('tab-bulk').classList.add('active-tab');
+                document.getElementById('pageTitle').innerText = "Bulk Processor";
+            }
+        }
 
-        async function startBulkWash() {
-            const btn = document.getElementById('startBulkBtn');
-            const feedContainer = document.getElementById('liveFeedContainer');
-            const feed = document.getElementById('liveFeed');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            
-            btn.disabled = true;
-            feedContainer.classList.remove('hidden');
-            progressContainer.classList.remove('hidden');
-            
-            exportData = []; 
-            let validCount = 0; 
-            let invalidCount = 0;
-            let processedCount = 0;
-            let currentIndex = 0;
+        async function verifyEmail() {
+            const email = document.getElementById('emailInput').value;
+            if (!email || currentCredits <= 0) { 
+                if (currentCredits <= 0) document.getElementById('paywallContainer').classList.remove('hidden');
+                return; 
+            }
+            const card = document.getElementById('statusCard');
+            document.getElementById('defaultMsg').classList.add('hidden');
+            document.getElementById('resultsContent').classList.remove('hidden');
+            card.classList.add('scanning-glow');
+            document.getElementById('statusIcon').innerHTML = '<i class="fa-solid fa-satellite fa-spin text-sky-400"></i>';
+            document.getElementById('statusTitle').innerText = "SCANNING...";
 
-            // THE MAILVAH CONCURRENCY ENGINE
-            const CONCURRENCY_LIMIT = 10; // Exactly 10 Workers running in parallel
+            try {
+                const res = await fetch('https://api.mailvah.com/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+                const data = await res.json();
+                card.classList.remove('scanning-glow');
+                await _supabase.rpc('increment_credits', { row_id: (await _supabase.auth.getUser()).data.user.id, amt: -1 });
+                fetchUserCredits();
+                
+                const icon = data.status === 'VALID' ? '<i class="fa-solid fa-shield-check text-emerald-400"></i>' : (data.status === 'CATCH_ALL' ? '<i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>' : '<i class="fa-solid fa-skull text-red-500"></i>');
+                document.getElementById('statusIcon').innerHTML = icon;
+                document.getElementById('statusTitle').innerText = data.status === 'VALID' ? 'SAFE' : (data.status === 'CATCH_ALL' ? 'TRAP' : 'DEAD');
+                document.getElementById('statusReason').innerText = data.reason || "Verification Complete.";
+            } catch (e) { card.classList.remove('scanning-glow'); }
+        }
 
-            async function worker() {
-                while (currentIndex < bulkEmails.length) {
-                    const i = currentIndex++; // Claim the next lead in line
-                    const email = bulkEmails[i];
-                    
-                    btn.innerHTML = `<i class="fa-solid fa-satellite-dish fa-spin"></i> Processing ${processedCount + 1} of ${bulkEmails.length}...`;
-                    let feedHtml = '';
+        let isAnnual = false;
+        function toggleBilling() { isAnnual = !isAnnual; document.getElementById('billingToggleText').innerText = isAnnual ? "Billed Annually (20% OFF)" : "Billed Monthly"; updateSlider(); }
+        function updateSlider() {
+            const tier = pricingTiers[document.getElementById('volumeSlider').value];
+            let price = isAnnual ? Math.round(tier.price * 0.8) : tier.price;
+            document.getElementById('displayCredits').innerText = tier.credits.toLocaleString();
+            document.getElementById('displayPrice').innerText = price;
+            document.getElementById('displayCPL').innerText = isAnnual ? "$" + (price / tier.credits).toFixed(3) : tier.cpl;
+        }
 
-                    try {
-                        const response = await fetch('https://api.mailvah.com/verify', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: email })
-                        });
-                        const data = await response.json();
-                        
-                        if (data.status === 'VALID') {
-                            validCount++;
-                            document.getElementById('stat-valid').innerText = validCount;
-                            exportData.push({ email: email, status: 'DELIVERABLE' });
-                            feedHtml = `<div class="flex justify-between items-center py-1 border-b border-slate-800/50"><span class="text-slate-300 truncate max-w-[75%]">> PING ${email}</span><span class="text-emerald-400">[ SAFE ]</span></div>`;
-                        } else if (data.status === 'CATCH_ALL') {
-                            invalidCount++;
-                            document.getElementById('stat-invalid').innerText = invalidCount;
-                            exportData.push({ email: email, status: 'CATCH_ALL_RISK' });
-                            feedHtml = `<div class="flex justify-between items-center py-1 border-b border-slate-800/50"><span class="text-slate-400 truncate max-w-[75%]">> PING ${email}</span><span class="text-yellow-500">[ TRAP ]</span></div>`;
-                        } else {
-                            invalidCount++;
-                            document.getElementById('stat-invalid').innerText = invalidCount;
-                            exportData.push({ email: email, status: 'UNDELIVERABLE' });
-                            feedHtml = `<div class="flex justify-between items-center py-1 border-b border-slate-800/50"><span class="text-slate-500 truncate max-w-[75%] line-through">> PING ${email}</span><span class="text-red-500">[ DEAD ]</span></div>`;
-                        }
-                    } catch (e) {
-                        exportData.push({ email: email, status: 'ERROR' });
-                    }
-                    
-                    processedCount++;
-                    let percent = Math.round((processedCount / bulkEmails.length) * 100);
-                    progressBar.style.width = percent + '%';
-                    progressText.innerText = percent + '%';
+        function makePayment() {
+            const tier = pricingTiers[document.getElementById('volumeSlider').value];
+            let amt = isAnnual ? Math.round(tier.price * 0.8) * 12 : tier.price;
+            FlutterwaveCheckout({
+                public_key: "FLWPUBK-dc0754094fea48efe0f9cc3fe45ed853-X",
+                tx_ref: "MV_" + Date.now(),
+                amount: amt, currency: "USD",
+                customer: { email: document.getElementById('authEmail').value || "user@mailvah.com" },
+                callback: async function(payment) {
+                    const { data: { user } } = await _supabase.auth.getUser();
+                    await _supabase.from('user_credits').update({ plan_tier: 'Pro', current_credits: currentCredits + tier.credits, monthly_limit: tier.credits }).eq('user_id', user.id);
+                    document.getElementById('paywallContainer').classList.add('hidden');
+                    fetchUserCredits();
+                },
+                customizations: { title: "Mailvah PRO Network", logo: "https://cdn-icons-png.flaticon.com/512/2913/2913990.png" }
+            });
+        }
 
-                    if (feedHtml) {
-                        feed.insertAdjacentHTML('beforeend', feedHtml);
-                        feed.scrollTop = feed.scrollHeight;
-                    }
+        let bulkEmails = []; let exportData = [];
+        function handleFileSelect(e) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const matches = evt.target.result.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi);
+                if (matches) { 
+                    bulkEmails = [...new Set(matches)]; 
+                    document.getElementById('stat-total').innerText = bulkEmails.length;
+                    document.getElementById('startBulkBtn').classList.remove('hidden');
+                }
+            };
+            reader.readAsText(e.target.files[0]);
+        }
 
-                    // A tiny 200ms breath between connections so the worker stays stealthy
-                    await new Promise(r => setTimeout(r, 200)); 
-                }
-            }
+        async function startBulkWash() {
+            if (currentCredits < bulkEmails.length) return alert("Insufficient Credits!");
+            document.getElementById('liveFeedContainer').classList.remove('hidden');
+            document.getElementById('progressContainer').classList.remove('hidden');
+            let idx = 0; let v = 0; let d = 0;
+            const work = async () => {
+                while (idx < bulkEmails.length) {
+                    const email = bulkEmails[idx++];
+                    try {
+                        const res = await fetch('https://api.mailvah.com/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+                        const data = await res.json();
+                        let status = data.status === 'VALID' ? 'SAFE' : (data.status === 'CATCH_ALL' ? 'TRAP' : 'DEAD');
+                        if (status === 'SAFE') v++; else d++;
+                        document.getElementById('stat-valid').innerText = v;
+                        document.getElementById('stat-invalid').innerText = d;
+                        exportData.push({ email, status });
+                        const log = `<div class="flex justify-between"><span>> PING ${email}</span><span class="${status==='SAFE'?'text-emerald-400':'text-red-400'}">[${status}]</span></div>`;
+                        document.getElementById('liveFeed').insertAdjacentHTML('beforeend', log);
+                        document.getElementById('liveFeed').scrollTop = document.getElementById('liveFeed').scrollHeight;
+                        document.getElementById('progressBar').style.width = Math.round((exportData.length / bulkEmails.length) * 100) + '%';
+                        document.getElementById('progressText').innerText = Math.round((exportData.length / bulkEmails.length) * 100) + '%';
+                    } catch (err) {}
+                }
+            };
+            await Promise.all(Array(10).fill(0).map(() => work()));
+            await _supabase.rpc('increment_credits', { row_id: (await _supabase.auth.getUser()).data.user.id, amt: -bulkEmails.length });
+            fetchUserCredits();
+            document.getElementById('downloadBtn').classList.remove('hidden');
+        }
 
-            // Spin up the 10 Workers
-            const workers = [];
-            for (let w = 0; w < CONCURRENCY_LIMIT; w++) {
-                workers.push(worker());
-            }
-            
-            // Wait for all workers to finish their jobs
-            await Promise.all(workers);
-
-            btn.innerHTML = `<i class="fa-solid fa-check-double"></i> OPERATION COMPLETE`;
-            btn.classList.remove('bg-gradient-to-r', 'from-emerald-500', 'to-emerald-600', 'text-white');
-            btn.classList.add('bg-slate-800', 'border', 'border-emerald-500/30', 'text-emerald-400');
-            document.getElementById('downloadBtn').classList.remove('hidden');
-        }
-
-        function downloadResults() {
-            let csvContent = "data:text/csv;charset=utf-8,Email_Address,Mailvah_Status\n";
-            exportData.forEach(function(rowArray) {
-                csvContent += rowArray.email + "," + rowArray.status + "\n";
-            });
-            var encodedUri = encodeURI(csvContent);
-            var link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "Mailvah_Clean_Asset.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // ==========================================
-        // THE VAULT LOCK (SUPABASE AUTHENTICATION)
-        // ==========================================
-        const supabaseUrl = 'https://onznuyxevistjmsgxnfm.supabase.co';
-        const supabaseKey = 'sb_publishable_gZ1Ea52nk0JCEO5twFFJwQ_CkHjXZqg';
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        async function handleSignUp() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            const msg = document.getElementById('authMessage');
-            
-            msg.classList.remove('hidden', 'text-red-400', 'text-emerald-400');
-            msg.innerText = "Creating account...";
-            msg.classList.add('text-sky-400');
-
-            const { data, error } = await _supabase.auth.signUp({ email, password });
-            
-            if (error) {
-                msg.classList.replace('text-sky-400', 'text-red-400');
-                msg.innerText = error.message;
-            } else {
-                msg.classList.replace('text-sky-400', 'text-emerald-400');
-                msg.innerText = "Success! You can now log in.";
-            }
-        }
-
-        async function handleLogin() {
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            const msg = document.getElementById('authMessage');
-            
-            msg.classList.remove('hidden', 'text-red-400');
-            msg.innerText = "Authenticating...";
-            msg.classList.add('text-sky-400');
-
-            const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-            
-            if (error) {
-                msg.classList.replace('text-sky-400', 'text-red-400');
-                msg.innerText = error.message;
-            } else {
-                // SUCCESS! Hide Auth Screen, Reveal the Dynamic Paywall
-                document.getElementById('authContainer').classList.add('hidden');
-                document.getElementById('paywallContainer').classList.remove('hidden');
-            }
-        }
-
-        // ==========================================
-        // THE CASH REGISTER (FLUTTERWAVE + SLIDER)
-        // ==========================================
-        
-        // Your Premium Pricing Tiers
-        const pricingTiers = [
-            { credits: "1,500", monthlyPrice: 29, cpl: "$0.019" },
-            { credits: "5,000", monthlyPrice: 79, cpl: "$0.015" },
-            { credits: "15,000", monthlyPrice: 149, cpl: "$0.009" },
-            { credits: "50,000", monthlyPrice: 299, cpl: "$0.005" },
-            { credits: "100,000", monthlyPrice: 499, cpl: "$0.004" },
-            { credits: "200,000", monthlyPrice: 799, cpl: "$0.003" }
-        ];
-
-        let currentTierIndex = 0;
-        let isAnnual = false;
-
-        function toggleBilling() {
-            isAnnual = !isAnnual;
-            document.getElementById('billingToggleText').innerText = isAnnual ? "Billed Annually (20% Off)" : "Billed Monthly";
-            updateSlider();
-        }
-
-        function updateSlider() {
-            const slider = document.getElementById('volumeSlider');
-            currentTierIndex = slider.value;
-            const tier = pricingTiers[currentTierIndex];
-            
-            let finalPrice = tier.monthlyPrice;
-            if (isAnnual) {
-                finalPrice = Math.round(tier.monthlyPrice * 0.8); // 20% discount math
-            }
-            
-            document.getElementById('displayCredits').innerText = tier.credits;
-            document.getElementById('displayPrice').innerText = finalPrice;
-            
-            // Calculate dynamic Cost Per Lead
-            let rawCredits = parseInt(tier.credits.replace(',', ''));
-            let dynamicCPL = isAnnual ? "$" + (finalPrice / rawCredits).toFixed(3) : tier.cpl;
-            document.getElementById('displayCPL').innerText = dynamicCPL;
-        }
-
-        function makePayment() {
-            const userEmail = document.getElementById('authEmail').value || 'founder@company.com';
-            const tier = pricingTiers[currentTierIndex];
-            
-            // If annual, charge them 12x the discounted monthly price upfront
-            let chargeAmount = isAnnual ? Math.round(tier.monthlyPrice * 0.8) * 12 : tier.monthlyPrice; 
-            
-            FlutterwaveCheckout({
-                public_key: "FLWPUBK-dc0754094fea48efe0f9cc3fe45ed853-X",
-                tx_ref: "mailvah_pro_" + Date.now(),
-                amount: chargeAmount,
-                currency: "USD",
-                payment_options: "card, banktransfer",
-                customer: {
-                    email: userEmail,
-                    name: "Mailvah User"
-                },
-                customizations: {
-                    title: "Mailvah PRO Network",
-                    description: tier.credits + " Credits (" + (isAnnual ? "Annual Plan" : "Monthly Plan") + ")",
-                    logo: "https://cdn-icons-png.flaticon.com/512/2913/2913990.png"
-                },
-                callback: function (payment) {
-                    console.log("Payment successful", payment);
-                    // THE MAGIC: Hide the paywall and unlock the engine!
-                    document.getElementById('paywallContainer').classList.add('hidden');
-                },
-                onclose: function() {
-                    console.log("Payment modal closed");
-                }
-            });
-        }
-    </script>
-
-    <div id="paywallContainer" class="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/95 backdrop-blur-md px-4 hidden">
-        <div class="max-w-lg w-full bg-slate-900 border border-blue-500/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(59,130,246,0.15)]">
-            <div class="text-center mb-6">
-                <div class="flex justify-center items-center gap-2 mb-2">
-                    <div class="bg-blue-600 p-1.5 rounded text-white text-xs"><i class="fa-solid fa-m"></i></div>
-                    <h2 class="text-2xl font-black text-white tracking-tight">Mailvah <span class="text-blue-500">Pro Network</span></h2>
-                </div>
-                <p class="text-slate-400 text-sm">Select your volume. <span class="text-emerald-400 font-semibold">Features 5x Rollover Credits.</span></p>
-            </div>
-            
-            <div class="flex justify-center mb-6">
-                <button onclick="toggleBilling()" class="bg-slate-800 border border-slate-700 text-slate-300 px-5 py-2 rounded-full text-sm font-semibold hover:bg-slate-700 transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-sync"></i> <span id="billingToggleText">Billed Monthly</span>
-                </button>
-            </div>
-
-            <div class="bg-slate-950 rounded-xl p-6 border border-slate-800 mb-6 text-center">
-                <div class="text-slate-400 font-semibold uppercase tracking-wider text-xs mb-1">Monthly Volume Limit</div>
-                <div class="text-3xl font-black text-white mb-4"><span id="displayCredits">1,500</span> <span class="text-lg text-slate-500 font-medium">Leads</span></div>
-                
-                <div class="flex justify-between items-end border-t border-slate-800 pt-4">
-                    <div class="text-left">
-                        <div class="text-xs text-slate-500 uppercase tracking-wider mb-1">Cost Per Lead</div>
-                        <div class="text-emerald-400 font-bold" id="displayCPL">$0.019</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-4xl font-black text-white">$<span id="displayPrice">29</span><span class="text-sm text-slate-500 font-medium">/mo</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mb-8">
-                <input type="range" id="volumeSlider" min="0" max="5" value="0" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" oninput="updateSlider()">
-                <div class="flex justify-between text-xs font-bold text-slate-500 mt-3 uppercase tracking-wider">
-                    <span>Starter</span>
-                    <span>Agency</span>
-                </div>
-            </div>
-
-            <button onclick="makePayment()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition-all flex justify-center items-center gap-2 shadow-lg shadow-blue-500/25">
-                <i class="fa-solid fa-credit-card"></i> SECURE CHECKOUT
-            </button>
-        </div>
-    </div>
-    
-    <script src="https://checkout.flutterwave.com/v3.js"></script>
+        function downloadResults() {
+            let csv = "Email,Status\n" + exportData.map(r => `${r.email},${r.status}`).join("\n");
+            let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'results.csv'; a.click();
+        }
+    </script>
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
 </body>
 </html>
