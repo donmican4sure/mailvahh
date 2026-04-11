@@ -6,6 +6,7 @@
     <title>Mailvah Pro | Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://checkout.flutterwave.com/v3.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { background-color: #0b1120; color: white; font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); }
@@ -95,6 +96,9 @@
             <button onclick="switchTab('bulk')" id="tab-bulk" class="sidebar-item flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-3 md:px-6 md:py-4 text-slate-400 transition-all text-sm md:text-base w-auto md:w-full hover:bg-slate-800/30 hover:text-slate-200 whitespace-nowrap">
                 <i class="fa-solid fa-layer-group w-4 md:w-5 text-center"></i><span class="font-medium">Bulk Engine</span>
             </button>
+            <button onclick="switchTab('monitor')" id="tab-monitor" class="sidebar-item flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-3 md:px-6 md:py-4 text-slate-400 transition-all text-sm md:text-base w-auto md:w-full hover:bg-slate-800/30 hover:text-slate-200 whitespace-nowrap">
+                <i class="fa-solid fa-gauge-high w-4 md:w-5 text-center"></i><span class="font-medium">Domain Monitor</span>
+            </button>
             <button class="sidebar-item flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 py-3 md:px-6 md:py-4 text-slate-600 cursor-not-allowed text-sm md:text-base w-auto md:w-full whitespace-nowrap">
                 <i class="fa-solid fa-database w-4 md:w-5 text-center"></i><span class="font-medium">Lead Finder</span><i class="fa-solid fa-lock text-[8px] md:text-[10px] ml-1 md:ml-auto"></i>
             </button>
@@ -109,7 +113,6 @@
                 <i class="fa-solid fa-power-off w-5 text-center"></i><span class="font-medium">Secure Disconnect</span>
             </button>
         </div>
-    </div>
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 md:p-10 relative">
@@ -224,25 +227,98 @@
                 </div>
             </div>
         </div>
+
+        <div id="view-monitor" class="hidden relative max-w-5xl">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-emerald-500">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="bg-emerald-500/10 p-3 rounded-xl">
+                            <i class="fa-solid fa-shield-check text-emerald-500 text-xl"></i>
+                        </div>
+                        <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Global Scan</span>
+                    </div>
+                    <h3 class="text-white font-bold text-lg mb-1">DMARC Security</h3>
+                    <p class="text-slate-400 text-xs">Protects your domain from spoofing & phishing.</p>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-purple-500">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="bg-purple-500/10 p-3 rounded-xl">
+                            <i class="fa-solid fa-list-check text-purple-500 text-xl"></i>
+                        </div>
+                        <span class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Real-time</span>
+                    </div>
+                    <h3 class="text-white font-bold text-lg mb-1">Blacklist Status</h3>
+                    <p class="text-slate-400 text-xs">Ensures your IP isn't flagged as a spammer.</p>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-blue-500">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="bg-blue-500/10 p-3 rounded-xl">
+                            <i class="fa-solid fa-inbox text-blue-500 text-xl"></i>
+                        </div>
+                        <span class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Predicted</span>
+                    </div>
+                    <h3 class="text-white font-bold text-lg mb-1">Inbox Delivery</h3>
+                    <p class="text-slate-400 text-xs">Likelihood of landing in the Primary tab.</p>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-700/50">
+                <div class="bg-slate-800/50 px-6 py-4 border-b border-slate-700/50 flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-white">Monitored Domains</h3>
+                    <button class="bg-purple-600 hover:bg-purple-500 text-[10px] text-white font-bold py-2 px-4 rounded-lg transition-all">
+                        <i class="fa-solid fa-plus mr-2"></i>ADD DOMAIN
+                    </button>
+                </div>
+                <table class="w-full text-left">
+                    <thead class="bg-slate-900/80 text-[10px] text-slate-500 uppercase tracking-widest">
+                        <tr>
+                            <th class="p-4">Domain</th>
+                            <th class="p-4">DMARC</th>
+                            <th class="p-4">Blacklist</th>
+                            <th class="p-4 text-right">Last Scan</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monitorTableBody" class="text-sm text-slate-300 divide-y divide-slate-800/50">
+                        <tr>
+                            <td class="p-4 font-medium text-white">donmican.tech</td>
+                            <td class="p-4"><span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-md border border-emerald-500/30">SECURE</span></td>
+                            <td class="p-4"><span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-md border border-emerald-500/30">CLEAN</span></td>
+                            <td class="p-4 text-right text-slate-500 text-xs">Today, 03:00 AM</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
         function switchTab(tab) {
             document.getElementById('tab-single').classList.remove('active-tab');
             document.getElementById('tab-bulk').classList.remove('active-tab');
+            document.getElementById('tab-monitor').classList.remove('active-tab');
+            
             document.getElementById('view-single').classList.add('hidden');
             document.getElementById('view-bulk').classList.add('hidden');
+            document.getElementById('view-monitor').classList.add('hidden');
 
             if (tab === 'single') {
                 document.getElementById('tab-single').classList.add('active-tab');
                 document.getElementById('view-single').classList.remove('hidden');
                 document.getElementById('pageTitle').innerText = "Deep-Scan Engine";
                 document.getElementById('pageDesc').innerText = "Direct Port 25 handshakes for zero-bounce validation.";
-            } else {
+            } else if (tab === 'bulk') {
                 document.getElementById('tab-bulk').classList.add('active-tab');
                 document.getElementById('view-bulk').classList.remove('hidden');
                 document.getElementById('pageTitle').innerText = "Bulk List Processor";
                 document.getElementById('pageDesc').innerText = "Enterprise-grade batch cleaning and domain protection.";
+            } else if (tab === 'monitor') {
+                document.getElementById('tab-monitor').classList.add('active-tab');
+                document.getElementById('view-monitor').classList.remove('hidden');
+                document.getElementById('pageTitle').innerText = "Infrastructure Monitor";
+                document.getElementById('pageDesc').innerText = "Real-time DNS health and blacklist tracking.";
             }
         }
 
@@ -453,7 +529,6 @@
         let currentCredits = 0;
         let userPlan = 'Free';
 
-        // NEW: Check if user is already logged in on page load
         _supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 document.getElementById('authContainer').classList.add('hidden');
@@ -461,7 +536,6 @@
             }
         });
 
-        // NEW: Listen for any authentication changes (keeps them logged in on refresh)
         _supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN') {
                 document.getElementById('authContainer').classList.add('hidden');
@@ -510,7 +584,6 @@
             } else {
                 msg.classList.replace('text-sky-400', 'text-emerald-400');
                 msg.innerText = "Account secured! Loading command center...";
-                // Let the onAuthStateChange listener handle letting them in
             }
         }
 
@@ -529,31 +602,25 @@
                 msg.classList.replace('text-sky-400', 'text-red-400');
                 msg.innerText = error.message;
             }
-            // If successful, the onAuthStateChange listener kicks in automatically and opens the vault. No forced paywall!
         }
+
         async function handleSignOut() {
-            // Tell the database to kill the secure token
             const { error } = await _supabase.auth.signOut();
             
             if (error) {
                 console.error("Sign Out Error:", error.message);
             } else {
-                // Clear the login inputs so the next person doesn't see their email
                 document.getElementById('authEmail').value = '';
                 document.getElementById('authPassword').value = '';
                 document.getElementById('emailInput').value = '';
-                
-                // Reset the dashboard UI to default
                 document.getElementById('userCreditBalance').innerText = '---';
                 switchTab('single');
-                
-                // Hide the paywall just in case it was open
-                document.getElementById('paywallContainer').classList.add('hidden');
-                
-                // The onAuthStateChange listener we added earlier will automatically detect 
-                // the sign out and throw the lock screen back up instantly!
+                if (document.getElementById('paywallContainer')) {
+                    document.getElementById('paywallContainer').classList.add('hidden');
+                }
             }
         }
+
         // ==========================================
         // CHECKOUT & BILLING LOGIC
         // ==========================================
@@ -571,12 +638,15 @@
 
         function toggleBilling() {
             isAnnual = !isAnnual;
-            document.getElementById('billingToggleText').innerText = isAnnual ? "Billed Annually (20% Off)" : "Billed Monthly";
+            if (document.getElementById('billingToggleText')) {
+                document.getElementById('billingToggleText').innerText = isAnnual ? "Billed Annually (20% Off)" : "Billed Monthly";
+            }
             updateSlider();
         }
 
         function updateSlider() {
             const slider = document.getElementById('volumeSlider');
+            if (!slider) return;
             currentTierIndex = slider.value;
             const tier = pricingTiers[currentTierIndex];
             
@@ -585,12 +655,12 @@
                 finalPrice = Math.round(tier.monthlyPrice * 0.8); 
             }
             
-            document.getElementById('displayCredits').innerText = tier.credits;
-            document.getElementById('displayPrice').innerText = finalPrice;
+            if (document.getElementById('displayCredits')) document.getElementById('displayCredits').innerText = tier.credits;
+            if (document.getElementById('displayPrice')) document.getElementById('displayPrice').innerText = finalPrice;
             
             let rawCredits = parseInt(tier.credits.replace(',', ''));
             let dynamicCPL = isAnnual ? "$" + (finalPrice / rawCredits).toFixed(3) : tier.cpl;
-            document.getElementById('displayCPL').innerText = dynamicCPL;
+            if (document.getElementById('displayCPL')) document.getElementById('displayCPL').innerText = dynamicCPL;
         }
 
         function makePayment() {
@@ -625,7 +695,7 @@
                         rollover_limit: rawCredits * 5
                     }).eq('user_id', user.id);
                     
-                    document.getElementById('paywallContainer').classList.add('hidden');
+                    if(document.getElementById('paywallContainer')) document.getElementById('paywallContainer').classList.add('hidden');
                     
                     fetchUserCredits();
                     alert("Payment Verified. Your account has been upgraded.");
@@ -634,3 +704,5 @@
             });
         }
     </script>
+</body>
+</html>
