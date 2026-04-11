@@ -167,7 +167,7 @@
                             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                             <i class="fa-solid fa-cloud-arrow-up text-5xl md:text-6xl text-sky-500/70 mb-3 md:mb-4 group-hover:text-sky-400 transition-colors"></i>
                             <h3 class="text-lg md:text-xl font-bold mb-1 md:mb-2 text-white">Upload Database</h3>
-                            <p class="text-slate-400 text-xs md:text-sm mb-6 md:mb-8 leading-relaxed">Scavenger logic will auto-extract emails from raw CSV files.</p>
+                            <p class="text-slate-400 text-xs md:text-sm mb-6 md:mb-8 leading-relaxed">Enterprise logic will preserve all columns and filter for SAFE leads.</p>
                             <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
                             <button onclick="document.getElementById('csvFile').click()" class="w-full bg-slate-800/80 hover:bg-slate-700 border border-slate-600/50 text-white font-semibold py-3 md:py-4 rounded-xl transition-all shadow-md text-xs md:text-sm">SELECT DATASET (.CSV)</button>
                         </div>
@@ -267,7 +267,7 @@
             <div class="glass-panel rounded-2xl overflow-hidden border border-slate-700/50">
                 <div class="bg-slate-800/50 px-6 py-4 border-b border-slate-700/50 flex justify-between items-center">
                     <h3 class="text-sm font-bold text-white">Monitored Domains</h3>
-                    <button class="bg-purple-600 hover:bg-purple-500 text-[10px] text-white font-bold py-2 px-4 rounded-lg transition-all">
+                    <button onclick="addNewDomain()" class="bg-purple-600 hover:bg-purple-500 text-[10px] text-white font-bold py-2 px-4 rounded-lg transition-all">
                         <i class="fa-solid fa-plus mr-2"></i>ADD DOMAIN
                     </button>
                 </div>
@@ -281,13 +281,7 @@
                         </tr>
                     </thead>
                     <tbody id="monitorTableBody" class="text-sm text-slate-300 divide-y divide-slate-800/50">
-                        <tr>
-                            <td class="p-4 font-medium text-white">donmican.tech</td>
-                            <td class="p-4"><span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-md border border-emerald-500/30">SECURE</span></td>
-                            <td class="p-4"><span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-md border border-emerald-500/30">CLEAN</span></td>
-                            <td class="p-4 text-right text-slate-500 text-xs">Today, 03:00 AM</td>
-                        </tr>
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -319,6 +313,7 @@
                 document.getElementById('view-monitor').classList.remove('hidden');
                 document.getElementById('pageTitle').innerText = "Infrastructure Monitor";
                 document.getElementById('pageDesc').innerText = "Real-time DNS health and blacklist tracking.";
+                fetchMonitoredDomains();
             }
         }
 
@@ -377,8 +372,9 @@
             }
         }
         
-        let bulkEmails = [];
+        let bulkDataRows = [];
         let exportData = []; 
+        let emailColumnIndex = -1;
 
         function handleFileSelect(event) {
             const file = event.target.files[0];
@@ -387,33 +383,41 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const text = e.target.result;
-                const extracted = text.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi);
+                const rows = text.split('\n').filter(row => row.trim() !== '');
+                if (rows.length < 1) return;
+
+                const headers = rows[0].split(',');
+                emailColumnIndex = headers.findIndex(h => h.toLowerCase().includes('email'));
                 
-                if (extracted && extracted.length > 0) {
-                    bulkEmails = [...new Set(extracted)]; 
-                    document.getElementById('stat-total').innerText = bulkEmails.length;
-                    
-                    document.getElementById('stat-valid').innerText = "0";
-                    document.getElementById('stat-invalid').innerText = "0";
-                    document.getElementById('downloadBtn').classList.add('hidden');
-                    document.getElementById('liveFeedContainer').classList.add('hidden');
-                    document.getElementById('progressContainer').classList.add('hidden');
-                    document.getElementById('liveFeed').innerHTML = '';
-                    document.getElementById('progressBar').style.width = '0%';
-                    
-                    const btn = document.getElementById('startBulkBtn');
-                    btn.classList.remove('hidden');
-                    btn.classList.remove('bg-slate-700', 'border-slate-600', 'text-slate-400');
-                    btn.classList.add('bg-gradient-to-r', 'from-emerald-500', 'to-emerald-600', 'text-white');
-                    btn.disabled = false;
-                    btn.innerHTML = `<i class="fa-solid fa-play"></i> INITIATE WASH (${bulkEmails.length} Targets)`;
+                if (emailColumnIndex === -1) {
+                    alert("No 'Email' column found in your CSV. Please check the file.");
+                    return;
                 }
+
+                bulkDataRows = rows; // Store all raw rows including header
+                document.getElementById('stat-total').innerText = rows.length - 1;
+                
+                document.getElementById('stat-valid').innerText = "0";
+                document.getElementById('stat-invalid').innerText = "0";
+                document.getElementById('downloadBtn').classList.add('hidden');
+                document.getElementById('liveFeedContainer').classList.add('hidden');
+                document.getElementById('progressContainer').classList.add('hidden');
+                document.getElementById('liveFeed').innerHTML = '';
+                document.getElementById('progressBar').style.width = '0%';
+                
+                const btn = document.getElementById('startBulkBtn');
+                btn.classList.remove('hidden');
+                btn.classList.remove('bg-slate-700', 'border-slate-600', 'text-slate-400');
+                btn.classList.add('bg-gradient-to-r', 'from-emerald-500', 'to-emerald-600', 'text-white');
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-play"></i> INITIATE WASH (${rows.length - 1} Targets)`;
             };
             reader.readAsText(file);
         }
 
         async function startBulkWash() {
-            if (currentCredits < bulkEmails.length) {
+            const rowCount = bulkDataRows.length - 1;
+            if (currentCredits < rowCount) {
                 alert("Insufficient Credits! Please upgrade your plan to wash this list.");
                 document.getElementById('paywallContainer').classList.remove('hidden');
                 return;
@@ -430,20 +434,22 @@
             feedContainer.classList.remove('hidden');
             progressContainer.classList.remove('hidden');
             
-            exportData = []; 
+            exportData = [bulkDataRows[0].trim() + ",Mailvah_Status"]; // Add status header to original headers
             let validCount = 0; 
             let invalidCount = 0;
             let processedCount = 0;
-            let currentIndex = 0;
+            let currentIndex = 1; // Start after header
 
             const CONCURRENCY_LIMIT = 10; 
 
             async function worker() {
-                while (currentIndex < bulkEmails.length) {
+                while (currentIndex < bulkDataRows.length) {
                     const i = currentIndex++; 
-                    const email = bulkEmails[i];
+                    const rawRow = bulkDataRows[i].trim();
+                    const columns = rawRow.split(',');
+                    const email = columns[emailColumnIndex];
                     
-                    btn.innerHTML = `<i class="fa-solid fa-satellite-dish fa-spin"></i> Processing ${processedCount + 1} of ${bulkEmails.length}...`;
+                    btn.innerHTML = `<i class="fa-solid fa-satellite-dish fa-spin"></i> Processing ${processedCount + 1} of ${rowCount}...`;
                     let feedHtml = '';
 
                     try {
@@ -457,25 +463,20 @@
                         if (data.status === 'VALID') {
                             validCount++;
                             document.getElementById('stat-valid').innerText = validCount;
-                            exportData.push({ email: email, status: 'DELIVERABLE' });
+                            exportData.push(rawRow + ",SAFE");
                             feedHtml = `<div class="flex justify-between items-center py-1 border-b border-slate-800/50"><span class="text-slate-300 truncate max-w-[65%] md:max-w-[75%]">> PING ${email}</span><span class="text-emerald-400">[ SAFE ]</span></div>`;
-                        } else if (data.status === 'CATCH_ALL') {
-                            invalidCount++;
-                            document.getElementById('stat-invalid').innerText = invalidCount;
-                            exportData.push({ email: email, status: 'CATCH_ALL_RISK' });
-                            feedHtml = `<div class="flex justify-between items-center py-1 border-b border-slate-800/50"><span class="text-slate-400 truncate max-w-[65%] md:max-w-[75%]">> PING ${email}</span><span class="text-yellow-500">[ TRAP ]</span></div>`;
                         } else {
                             invalidCount++;
                             document.getElementById('stat-invalid').innerText = invalidCount;
-                            exportData.push({ email: email, status: 'UNDELIVERABLE' });
-                            feedHtml = `<div class="flex justify-between items-center py-1 border-b border-slate-800/50"><span class="text-slate-500 truncate max-w-[65%] md:max-w-[75%] line-through">> PING ${email}</span><span class="text-red-500">[ DEAD ]</span></div>`;
+                            // Filter out trap/dead by NOT adding to exportData
+                            feedHtml = `<div class="flex justify-between items-center py-1 border-b border-slate-800/50"><span class="text-slate-500 truncate max-w-[65%] md:max-w-[75%] line-through">> PING ${email}</span><span class="text-red-500">[ REMOVED ]</span></div>`;
                         }
                     } catch (e) {
-                        exportData.push({ email: email, status: 'ERROR' });
+                        // On error, we safely exclude it
                     }
                     
                     processedCount++;
-                    let percent = Math.round((processedCount / bulkEmails.length) * 100);
+                    let percent = Math.round((processedCount / rowCount) * 100);
                     progressBar.style.width = percent + '%';
                     progressText.innerText = percent + '%';
 
@@ -496,7 +497,7 @@
             await Promise.all(workers);
 
             const { data: { user } } = await _supabase.auth.getUser();
-            await _supabase.rpc('increment_credits', { row_id: user.id, amt: -bulkEmails.length });
+            await _supabase.rpc('increment_credits', { row_id: user.id, amt: -rowCount });
             fetchUserCredits();
 
             btn.innerHTML = `<i class="fa-solid fa-check-double"></i> OPERATION COMPLETE`;
@@ -506,10 +507,7 @@
         }
 
         function downloadResults() {
-            let csvContent = "data:text/csv;charset=utf-8,Email_Address,Mailvah_Status\n";
-            exportData.forEach(function(rowArray) {
-                csvContent += rowArray.email + "," + rowArray.status + "\n";
-            });
+            let csvContent = "data:text/csv;charset=utf-8," + exportData.join("\n");
             var encodedUri = encodeURI(csvContent);
             var link = document.createElement("a");
             link.setAttribute("href", encodedUri);
@@ -520,8 +518,75 @@
         }
 
         // ==========================================
-        // DATABASE CONNECTION & SESSION MEMORY
+        // DOMAIN MONITOR LOGIC
         // ==========================================
+        async function addNewDomain() {
+            const domain = prompt("Enter the domain to monitor (e.g., company.com):");
+            if (!domain) return;
+
+            const cleanDomain = domain.trim().toLowerCase();
+            if (!cleanDomain.includes('.')) {
+                alert("Please enter a valid domain format.");
+                return;
+            }
+
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) return;
+
+            const { error } = await _supabase.from('domain_health').insert([
+                { user_id: user.id, domain_name: cleanDomain }
+            ]);
+
+            if (error) {
+                alert("Error adding domain. Make sure your database table 'domain_health' exists.");
+                console.error(error);
+                return;
+            }
+
+            alert(`${cleanDomain} added! The server will scan it tonight at 3:00 AM.`);
+            fetchMonitoredDomains(); 
+        }
+
+        async function fetchMonitoredDomains() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) return;
+
+            const tbody = document.getElementById('monitorTableBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">Loading domains...</td></tr>';
+
+            const { data, error } = await _supabase.from('domain_health').select('*').eq('user_id', user.id).order('last_checked', { ascending: false });
+
+            if (error || !data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">No domains monitored yet. Click Add Domain to start.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = ''; 
+
+            data.forEach(record => {
+                const dmarcBadge = record.dmarc_status === 'healthy' 
+                    ? '<span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-md border border-emerald-500/30">SECURE</span>' 
+                    : (record.dmarc_status === 'broken' ? '<span class="bg-red-500/20 text-red-400 text-[10px] px-2 py-1 rounded-md border border-red-500/30">BROKEN</span>' : '<span class="bg-slate-500/20 text-slate-400 text-[10px] px-2 py-1 rounded-md border border-slate-500/30">PENDING</span>');
+                
+                const blacklistBadge = record.blacklist_status === 'clean' 
+                    ? '<span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-md border border-emerald-500/30">CLEAN</span>' 
+                    : (record.blacklist_status === 'listed' ? '<span class="bg-red-500/20 text-red-400 text-[10px] px-2 py-1 rounded-md border border-red-500/30">LISTED</span>' : '<span class="bg-slate-500/20 text-slate-400 text-[10px] px-2 py-1 rounded-md border border-slate-500/30">PENDING</span>');
+
+                const lastScan = record.last_checked ? new Date(record.last_checked).toLocaleString() : 'Waiting for Night Scan...';
+
+                const row = `
+                    <tr>
+                        <td class="p-4 font-medium text-white">${record.domain_name}</td>
+                        <td class="p-4">${dmarcBadge}</td>
+                        <td class="p-4">${blacklistBadge}</td>
+                        <td class="p-4 text-right text-slate-500 text-xs">${lastScan}</td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', row);
+            });
+        }
+
+        // DATABASE CONNECTION & SESSION MEMORY
         const supabaseUrl = 'https://onznuyxevistjmsgxnfm.supabase.co';
         const supabaseKey = 'sb_publishable_gZ1Ea52nk0JCEO5twFFJwQ_CkHjXZqg';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -621,9 +686,6 @@
             }
         }
 
-        // ==========================================
-        // CHECKOUT & BILLING LOGIC
-        // ==========================================
         const pricingTiers = [
             { credits: "1,500", monthlyPrice: 29, cpl: "$0.019" },
             { credits: "5,000", monthlyPrice: 79, cpl: "$0.015" },
